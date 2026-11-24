@@ -92,7 +92,7 @@ table { border-collapse:collapse; width:100%; } td { padding:5px 0; border-botto
     <h3>呼び出しホットキー</h3>
     <p>欄をクリックして、割り当てたいキーを押してください（Ctrl / Alt / Shift のいずれか必須）。</p>
     <input id="hk" type="text" readonly>
-    <div class="row" style="margin-top:10px"><button class="btn" id="hkreset">既定に戻す (Ctrl+Alt+V)</button><span class="msg" id="hkmsg"></span></div>
+    <div class="row" style="margin-top:10px"><button class="btn" id="hkreset">既定に戻す</button><span class="msg" id="hkmsg"></span></div>
   </div>
   <div class="card">
     <h3>表示位置</h3>
@@ -159,18 +159,12 @@ table { border-collapse:collapse; width:100%; } td { padding:5px 0; border-botto
   </div>
   <div class="card"><h3>データの場所</h3><p id="dir" style="user-select:text"></p><button class="btn" id="opendir">フォルダを開く</button></div>
   <div class="card"><h3>キー操作</h3>
-    <table>
-      <tr><td><kbd>Enter</kbd></td><td>貼り付けて閉じる</td></tr>
-      <tr><td><kbd>Tab</kbd></td><td>履歴 ⇔ 定型文</td></tr>
-      <tr><td><kbd>Alt</kbd>+<kbd>数字</kbd></td><td>上から1〜10番目を即貼り付け</td></tr>
-      <tr><td><kbd>Ctrl</kbd>+<kbd>P</kbd></td><td>ピン留め切替</td></tr>
-      <tr><td><kbd>Ctrl</kbd>+<kbd>D</kbd></td><td>履歴を削除</td></tr>
-      <tr><td><kbd>Esc</kbd></td><td>入力クリア / 閉じる</td></tr>
-    </table>
+    <table id="keytable"></table>
   </div>
 </section>
 
 </main>
+<script src="platform.js"></script>
 <script src="themes.js"></script>
 <script>
 const { invoke } = window.__TAURI__.core;
@@ -197,8 +191,8 @@ function keyName(e) {
   return null;
 }
 async function applyHotkey(hk) {
-  try { await invoke('set_hotkey', { hotkey: hk }); $('hk').value = hk; say($('hkmsg'), '保存しました'); }
-  catch (err) { say($('hkmsg'), String(err), true); $('hk').value = (await invoke('get_settings')).hotkey; }
+  try { await invoke('set_hotkey', { hotkey: hk }); $('hk').value = fmtHotkey(hk); say($('hkmsg'), '保存しました'); }
+  catch (err) { say($('hkmsg'), String(err), true); $('hk').value = fmtHotkey((await invoke('get_settings')).hotkey); }
 }
 $('hk').addEventListener('focus', () => { $('hk').classList.add('rec'); say($('hkmsg'), 'キーを押してください…'); });
 $('hk').addEventListener('blur', () => $('hk').classList.remove('rec'));
@@ -208,7 +202,7 @@ $('hk').addEventListener('keydown', (e) => {
   const k = keyName(e);
   const mods = [e.ctrlKey && 'Ctrl', e.altKey && 'Alt', e.shiftKey && 'Shift', e.metaKey && 'Super'].filter(Boolean);
   if (!k) return say($('hkmsg'), 'このキーは使えません', true);
-  if (!mods.length) return say($('hkmsg'), 'Ctrl / Alt / Shift のいずれかと組み合わせてください', true);
+  if (!mods.length) return say($('hkmsg'), `${modsHelp()} のいずれかと組み合わせてください`, true);
   applyHotkey([...mods, k].join('+')); $('hk').blur();
 });
 $('hkreset').addEventListener('click', () => applyHotkey('Ctrl+Alt+V'));
@@ -387,7 +381,16 @@ window.addEventListener('focus', () => { if ($('p-snip').classList.contains('on'
 /* ---------- init ---------- */
 invoke('get_settings').then((s) => {
   S = s;
-  $('hk').value = s.hotkey; $('auto').checked = s.autostart;
+  $('hk').value = fmtHotkey(s.hotkey); $('auto').checked = s.autostart;
+  $('hkreset').textContent = `既定に戻す (${fmtHotkey('Ctrl+Alt+V')})`;
+  $('keytable').innerHTML = [
+    [['Enter'], '貼り付けて閉じる'],
+    [['Tab'], '履歴 ⇔ 定型文'],
+    [[combo(['Alt'], '数字')], '上から1〜10番目を即貼り付け'],
+    [[combo(['Ctrl'], 'P')], 'ピン留め切替'],
+    [[combo(['Ctrl'], 'D')], '履歴を削除'],
+    [['Esc'], '入力クリア / 閉じる'],
+  ].map(([k, d]) => `<tr><td><kbd>${k[0]}</kbd></td><td>${d}</td></tr>`).join('');
   curTheme = s.theme; applyTheme(curTheme); drawThemes();
   const r = document.querySelector(`input[name=pos][value=${s.position}]`); if (r) { r.checked = true; r.closest('label').classList.add('on'); }
   $('maxitems').value = s.max_items; $('maxkb').value = s.max_kb; $('count').textContent = s.count; $('dir').textContent = s.data_dir;

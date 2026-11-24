@@ -90,6 +90,9 @@ function choose(i) {
   if (r) invoke('choose', { id: r.id, mode });
 }
 
+document.getElementById('hint').textContent =
+  `↵ 貼付　Tab 履歴/定型文　${combo(['Alt'], '数字')} 即貼　${combo(['Ctrl'], 'P')} ピン　${combo(['Ctrl'], 'D')} 削除　Esc 閉じる`;
+
 invoke('get_settings').then((s) => applyTheme(s.theme));
 listen('theme', (e) => applyTheme(e.payload));
 
