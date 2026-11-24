@@ -3,7 +3,7 @@
   --sel: #e6efff; --mark: #ffe58a; --accent: #2f6df6;
 }
 @media (prefers-color-scheme: dark) {
-  :root { --bg: #232326; --fg: #ececee; --sub: #9a9aa2; --line: #38383d;
+  :root { --bg: #232326; --fg: #ececee; --sub: #b4b4bd; --line: #38383d;
           --sel: #2f3d5c; --mark: #6b5a12; --accent: #6c9bff; }
 }
 * { box-sizing: border-box; }
@@ -13,6 +13,7 @@ html, body { margin: 0; height: 100%; background: transparent; overflow: hidden;
   background: var(--bg); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
 #head { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
 #q { flex: 1; border: 0; outline: 0; background: transparent; color: var(--fg); font-size: 16px; user-select: text; }
+#q::placeholder { color: var(--sub); opacity: .8; }
 #tabs { display: flex; gap: 2px; font-size: 12px; }
 #tabs span { padding: 2px 9px; border-radius: 10px; color: var(--sub); }
 #tabs span.on { background: var(--accent); color: var(--accent-fg, #fff); }
@@ -31,9 +32,9 @@ mark { background: var(--mark); color: inherit; border-radius: 2px; }
 .empty { padding: 24px; text-align: center; color: var(--sub); }
 
 /* すりガラス: 窓の背後は OS がぼかす（macOS: vibrancy / Windows: Acrylic）。背景色を半透明にして透かす */
-html.glass #app { background: var(--bg); background: color-mix(in srgb, var(--bg) 55%, transparent);
+html.glass #app { background: var(--bg); background: color-mix(in srgb, var(--bg) 86%, transparent);
   border-color: color-mix(in srgb, var(--line) 70%, transparent); }
 html.glass #head, html.glass #preview, html.glass #hint { border-color: color-mix(in srgb, var(--line) 70%, transparent); }
-html.glass .row.sel { background: color-mix(in srgb, var(--sel) 80%, transparent); }
+html.glass .row.sel { background: color-mix(in srgb, var(--sel) 92%, transparent); }
 /* Windows 11 は影を付けると OS が角を 8px で丸め、1px の枠も付ける */
 html.win.shadow #app { border-radius: 8px; border-color: transparent; }
