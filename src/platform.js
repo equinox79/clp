@@ -31,19 +31,9 @@ const DEFAULT_KEYS = {
 
 /** 割り当て可能な操作の一覧（キー名, 表示名） */
 const KEY_ACTIONS = [
-  ['next', '次の項目へ'],
-  ['prev', '前の項目へ'],
-  ['choose', '貼り付けて閉じる'],
-  ['paste_trim', '前後の空白を除いて貼り付け'],
-  ['paste_oneline', '改行を除いて1行で貼り付け'],
-  ['paste_upper', '大文字にして貼り付け'],
-  ['paste_lower', '小文字にして貼り付け'],
-  ['switch_tab', '履歴 ⇔ 定型文 の切り替え'],
-  ['pin', 'ピン留め切替（履歴）'],
-  ['delete', '履歴を削除'],
-  ['edit_snippets', 'snippets.toml を開く（定型文）'],
-  ['close', '入力クリア / 閉じる'],
-];
+  'next', 'prev', 'choose', 'paste_trim', 'paste_oneline', 'paste_upper', 'paste_lower',
+  'switch_tab', 'pin', 'delete', 'edit_snippets', 'close',
+].map((a) => [a, 'act.' + a]);
 
 /** キーイベント → 物理キー名（"KeyA"→"A", "Digit1"→"1"。対応外のキーは null） */
 function eventKeyName(e) {
@@ -71,7 +61,7 @@ function bindingProblem(c) {
   const key = p[p.length - 1];
   const mods = p.slice(0, -1);
   if (!mods.some((m) => m !== 'Shift') && !PLAIN_OK.test(key)) {
-    return `文字入力と衝突するため、${modsHelp(true)} のいずれかと組み合わせてください`;
+    return t('keys.plain', { mods: modsHelp(true) });
   }
   return '';
 }

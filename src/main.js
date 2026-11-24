@@ -34,7 +34,7 @@ function render() {
   const terms = $q.value.trim().split(/\s+/).filter(Boolean);
   const re = terms.length ? new RegExp(terms.map(escRe).join('|'), 'gi') : null;
   if (!rows.length) {
-    $list.innerHTML = `<div class="empty">${mode === 'snippets' ? `定型文がありません（${first('edit_snippets')} で編集）` : '履歴がありません'}</div>`;
+    $list.innerHTML = `<div class="empty">${mode === 'snippets' ? t('empty.snippets', { key: first('edit_snippets') }) : t('empty.history')}</div>`;
     $prev.textContent = '';
     return;
   }
@@ -125,9 +125,10 @@ function applyKeys(k) {
   KEYS = { ...DEFAULT_KEYS, ...k };
   bindMap = {};
   for (const [act] of KEY_ACTIONS) for (const c of KEYS[act] || []) bindMap[c] = act;
-  document.getElementById('hint').textContent =
-    `${first('choose')} 貼付　${first('switch_tab')} 履歴/定型文　${combo([KEYS.quick_mod], '数字')} 即貼　` +
-    `${first('pin')} ピン　${first('delete')} 削除　${first('paste_trim')} 空白除去　${first('close')} 閉じる`;
+  document.getElementById('hint').textContent = t('hint', {
+    choose: first('choose'), tab: first('switch_tab'), quick: combo([KEYS.quick_mod], t('hint.digit')),
+    pin: first('pin'), delete: first('delete'), trim: first('paste_trim'), close: first('close'),
+  });
   if (!rows.length) render();
 }
 
@@ -167,8 +168,9 @@ const ACT = {
   edit_snippets: () => { if (mode !== 'snippets') return false; invoke('open_snippets'); },
 };
 
-invoke('get_keys').then(applyKeys);
+I18N_READY.then(() => invoke('get_keys').then(applyKeys));
 listen('keys', (e) => applyKeys(e.payload));
+listen('lang', () => location.reload());
 const setFont = (px) => document.documentElement.style.setProperty('--fs', px + 'px');
 invoke('get_settings').then((s) => { applyTheme(s.theme); setFont(s.font_size); setEffects(s); });
 listen('theme', (e) => applyTheme(e.payload));

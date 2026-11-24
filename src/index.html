@@ -9,15 +9,16 @@
 <body>
 <div id="app">
   <div id="head">
-    <input id="q" type="text" placeholder="検索…" autocomplete="off" spellcheck="false" autofocus>
-    <span id="paused" hidden title="トレイのメニューから再開できます">⏸ 記録停止中</span>
-    <div id="tabs"><span id="t-history" class="on">履歴</span><span id="t-snippets">定型文</span></div>
+    <input id="q" type="text" data-i18n-ph="search.ph" placeholder="" autocomplete="off" spellcheck="false" autofocus>
+    <span id="paused" hidden data-i18n-title="paused.tip" data-i18n="paused"></span>
+    <div id="tabs"><span id="t-history" class="on" data-i18n="tab.history"></span><span id="t-snippets" data-i18n="tab.snippets"></span></div>
   </div>
   <div id="list"></div>
   <pre id="preview"></pre>
-  <div id="hint">↵ 貼付　Tab 履歴/定型文　Alt+数字 即貼　Ctrl+P ピン　Ctrl+D 削除　Esc 閉じる</div>
+  <div id="hint"></div>
 </div>
 <script src="platform.js"></script>
+<script src="i18n.js"></script>
 <script src="themes.js"></script>
 <script src="main.js"></script>
 </body>

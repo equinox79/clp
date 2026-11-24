@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<title>clp 設定</title>
+<title>clp</title>
 <style>
 :root { --bg:#fbfbfc; --fg:#1d1d1f; --sub:#6e6e73; --line:#e2e2e6; --sel:#e6efff; --mark:#ffe58a; --accent:#2f6df6; --err:#d33; }
 @media (prefers-color-scheme: dark) { :root { --bg:#232326; --fg:#ececee; --sub:#9a9aa2; --line:#38383d; --sel:#2f3d5c; --mark:#6b5a12; --accent:#6c9bff; --err:#ff7b7b; } }
@@ -86,126 +86,132 @@ table { border-collapse:collapse; width:100%; } td { padding:5px 0; border-botto
 <body>
 <nav>
   <div class="brand"><i></i>clp</div>
-  <button data-p="general" class="on">⚙ 一般</button>
-  <button data-p="look">🎨 外観</button>
-  <button data-p="keys">⌨ キー操作</button>
-  <button data-p="snip">📝 定型文</button>
-  <button data-p="hist">🗂 履歴</button>
-  <button data-p="about">ℹ 情報</button>
+  <button data-p="general" class="on">⚙ <span data-i18n="nav.general"></span></button>
+  <button data-p="look">🎨 <span data-i18n="nav.look"></span></button>
+  <button data-p="keys">⌨ <span data-i18n="nav.keys"></span></button>
+  <button data-p="snip">📝 <span data-i18n="nav.snip"></span></button>
+  <button data-p="hist">🗂 <span data-i18n="nav.hist"></span></button>
+  <button data-p="about">ℹ <span data-i18n="nav.about"></span><span class="dot" hidden> ●</span></button>
 </nav>
 <main>
 
 <section id="p-general" class="on">
-  <h1>一般</h1>
+  <h1 data-i18n="gen.title"></h1>
   <div class="card">
-    <h3>呼び出しホットキー</h3>
-    <p>欄をクリックして、割り当てたいキーを押してください（Ctrl / Alt / Shift のいずれか必須）。</p>
+    <h3 data-i18n="gen.hk_h"></h3>
+    <p data-i18n="gen.hk_p"></p>
     <input id="hk" type="text" readonly>
-    <div class="row" style="margin-top:10px"><button class="btn" id="hkreset">既定に戻す</button><span class="msg" id="hkmsg"></span></div>
+    <div class="row" style="margin-top:10px"><button class="btn" id="hkreset"></button><span class="msg" id="hkmsg"></span></div>
   </div>
   <div class="card">
-    <h3>表示位置</h3>
-    <p>入力カーソルが取得できないアプリ（Chrome・VS Code など）では、マウス位置に表示します。</p>
+    <h3 data-i18n="gen.pos_h"></h3>
+    <p data-i18n="gen.pos_p"></p>
     <div class="seg" id="pos">
-      <label><input type="radio" name="pos" value="center"><b>🖥</b>画面中央</label>
-      <label><input type="radio" name="pos" value="mouse"><b>🖱</b>マウス位置</label>
-      <label><input type="radio" name="pos" value="caret"><b>⌨</b>入力カーソル付近</label>
+      <label><input type="radio" name="pos" value="center"><b>🖥</b><span data-i18n="gen.pos_center"></span></label>
+      <label><input type="radio" name="pos" value="mouse"><b>🖱</b><span data-i18n="gen.pos_mouse"></span></label>
+      <label><input type="radio" name="pos" value="caret"><b>⌨</b><span data-i18n="gen.pos_caret"></span></label>
     </div>
   </div>
   <div class="card">
-    <div class="row"><div class="grow"><h3>ログイン時に自動で常駐</h3><p style="margin:0">ログイン時にトレイへ常駐します。</p></div>
+    <div class="row"><div class="grow"><h3 data-i18n="gen.auto_h"></h3><p style="margin:0" data-i18n="gen.auto_p"></p></div>
       <label class="sw"><input type="checkbox" id="auto"><span></span></label></div>
     <div class="msg" id="automsg"></div>
   </div>
   <div class="card">
-    <div class="row"><div class="grow"><h3>フォーカスが外れたら閉じる</h3><p style="margin:0">オフにすると、Esc や貼り付けを行うまで窓が残ります。</p></div>
+    <div class="row"><div class="grow"><h3 data-i18n="gen.blur_h"></h3><p style="margin:0" data-i18n="gen.blur_p"></p></div>
       <label class="sw"><input type="checkbox" id="blur"><span></span></label></div>
+  </div>
+  <div class="card">
+    <h3 data-i18n="gen.lang_h"></h3>
+    <p data-i18n-html="gen.lang_p"></p>
+    <div class="row"><select id="lang" class="grow"></select><button class="btn" id="opendir2" data-i18n="about.open"></button></div>
   </div>
 </section>
 
 <section id="p-look">
-  <h1>外観</h1>
-  <div class="card"><h3>テーマ</h3><p>選ぶとすぐ反映されます。</p><div id="themes"></div></div>
-  <div class="card"><h3>文字サイズ</h3><p>履歴の窓の文字の大きさです。</p>
-    <select id="fontsize"><option value="12">小</option><option value="14">標準</option><option value="16">大</option><option value="18">特大</option></select>
+  <h1 data-i18n="look.title"></h1>
+  <div class="card"><h3 data-i18n="look.theme_h"></h3><p data-i18n="look.theme_p"></p><div id="themes"></div></div>
+  <div class="card"><h3 data-i18n="look.fs_h"></h3><p data-i18n="look.fs_p"></p>
+    <select id="fontsize"><option value="12" data-i18n="look.fs_s"></option><option value="14" data-i18n="look.fs_m"></option><option value="16" data-i18n="look.fs_l"></option><option value="18" data-i18n="look.fs_xl"></option></select>
   </div>
   <div class="card">
-    <div class="row"><div class="grow"><h3>窓の影</h3><p style="margin:0">履歴の窓に影を付けて、背後のウィンドウと区別しやすくします。</p></div>
+    <div class="row"><div class="grow"><h3 data-i18n="look.shadow_h"></h3><p style="margin:0" data-i18n="look.shadow_p"></p></div>
       <label class="sw"><input type="checkbox" id="fxshadow"><span></span></label></div>
-    <div class="row" style="margin-top:12px"><div class="grow"><h3>すりガラス</h3><p style="margin:0">窓の背景を半透明にし、背後をぼかして透かします。</p></div>
+    <div class="row" style="margin-top:12px"><div class="grow"><h3 data-i18n="look.glass_h"></h3><p style="margin:0" data-i18n="look.glass_p"></p></div>
       <label class="sw"><input type="checkbox" id="fxglass"><span></span></label></div>
   </div>
 </section>
 
 <section id="p-keys">
-  <h1>キー操作</h1>
+  <h1 data-i18n="keys.title"></h1>
   <div class="card">
-    <h3>窓の中のキー</h3>
-    <p>「＋」を押してから、割り当てたいキーを押します。× で外します。1つの操作に複数のキーを割り当てられます。</p>
+    <h3 data-i18n="keys.win_h"></h3>
+    <p data-i18n="keys.win_p"></p>
     <div id="keyrows"></div>
-    <div class="row" style="margin:12px 0 0"><button class="btn" id="keyreset">すべて既定に戻す</button><span class="msg" id="keymsg"></span></div>
+    <div class="row" style="margin:12px 0 0"><button class="btn" id="keyreset" data-i18n="keys.reset"></button><span class="msg" id="keymsg"></span></div>
   </div>
   <div class="card">
-    <h3>即貼り付け</h3>
-    <div class="row"><span class="grow">上から1〜10番目を貼り付ける<br><small style="color:var(--sub)">修飾キー + 数字（<span id="qexample"></span> など）</small></span><select id="quickmod"></select></div>
-    <div class="row"><span class="grow">定型文タブで、検索欄が空のとき数字キー単体で貼り付ける</span><label class="sw"><input type="checkbox" id="bare"><span></span></label></div>
+    <h3 data-i18n="keys.quick_h"></h3>
+    <div class="row"><span class="grow"><span data-i18n="keys.quick_l"></span><br><small style="color:var(--sub)" id="qsub"></small></span><select id="quickmod"></select></div>
+    <div class="row"><span class="grow" data-i18n="keys.bare"></span><label class="sw"><input type="checkbox" id="bare"><span></span></label></div>
   </div>
 </section>
 
 <section id="p-snip" class="wide">
-  <h1>定型文 <span class="msg" id="scount" style="font-weight:400;margin-left:8px"></span></h1>
+  <h1><span data-i18n="snip.title"></span> <span class="msg" id="scount" style="font-weight:400;margin-left:8px"></span></h1>
   <div id="sbanner"></div>
   <div id="snip">
     <div style="display:flex;flex-direction:column;gap:8px;min-height:0">
       <div id="slist"></div>
-      <div class="bar"><button class="btn pri" id="sadd">＋ 追加</button><span class="msg" id="sstat" style="margin-left:auto"></span></div>
+      <div class="bar"><button class="btn pri" id="sadd" data-i18n="snip.add"></button><span class="msg" id="sstat" style="margin-left:auto"></span></div>
     </div>
     <div id="sed"></div>
   </div>
 </section>
 
 <section id="p-hist">
-  <h1>履歴</h1>
+  <h1 data-i18n="hist.title"></h1>
   <div class="card">
-    <h3>保存の上限</h3>
-    <p>ピン留めした項目は上限の対象外です。変更はすぐ反映されます。</p>
-    <div class="row"><span class="grow">履歴の最大件数</span><input type="number" id="maxitems" min="50" max="100000" step="100"> 件</div>
-    <div class="row"><span class="grow">1件の最大サイズ</span><input type="number" id="maxkb" min="1" max="20000" step="64"> KB</div>
+    <h3 data-i18n="hist.lim_h"></h3>
+    <p data-i18n="hist.lim_p"></p>
+    <div class="row"><span class="grow" data-i18n="hist.max_items"></span><input type="number" id="maxitems" min="50" max="100000" step="100"> <span data-i18n="hist.unit_items"></span></div>
+    <div class="row"><span class="grow" data-i18n="hist.max_kb"></span><input type="number" id="maxkb" min="1" max="20000" step="64"> KB</div>
     <div class="msg" id="limmsg"></div>
   </div>
   <div class="card">
-    <h3>記録しないアプリ</h3>
-    <p>ここに書いたアプリでコピーした内容は、履歴に残しません。1行に1つ、<span id="exhelp"></span>で書きます（大文字小文字は区別しません）。パスワード管理アプリなどに。</p>
+    <h3 data-i18n="hist.excl_h"></h3>
+    <p id="exptxt"></p>
     <textarea id="excl" rows="4" spellcheck="false" style="width:100%;font:13px Consolas,monospace;box-sizing:border-box;background:transparent;color:inherit;border:1px solid var(--line);border-radius:6px;padding:6px"></textarea>
-    <div class="row" style="flex-wrap:wrap;gap:6px"><span>最近コピーしたアプリ:</span><span id="recent" style="display:contents"></span></div>
+    <div class="row" style="flex-wrap:wrap;gap:6px"><span data-i18n="hist.recent"></span><span id="recent" style="display:contents"></span></div>
     <div class="msg" id="exmsg"></div>
   </div>
   <div class="card">
-    <h3>履歴の削除</h3>
-    <p>現在 <b id="count">0</b> 件。ピン留め以外をすべて削除します（元に戻せません）。</p>
-    <button class="btn danger" id="clear">履歴をすべて削除</button> <span class="msg" id="clrmsg"></span>
+    <h3 data-i18n="hist.clear_h"></h3>
+    <p id="clrp"></p>
+    <button class="btn danger" id="clear" data-i18n="hist.clear_btn"></button> <span class="msg" id="clrmsg"></span>
   </div>
 </section>
 
 <section id="p-about">
-  <h1>情報</h1>
-  <div class="card"><h3>アップデート</h3>
-    <p>現在のバージョン: <b id="ver"></b>　（GitHub Releases の最新版を確認します）</p>
-    <div class="row"><button class="btn" id="chk">更新を確認</button><button class="btn pri" id="upd" style="display:none">今すぐ更新</button></div>
+  <h1 data-i18n="about.title"></h1>
+  <div class="card"><h3 data-i18n="about.upd_h"></h3>
+    <p id="verp"></p>
+    <div class="row"><button class="btn" id="chk" data-i18n="about.chk"></button><button class="btn pri" id="upd" style="display:none" data-i18n="about.upd_now"></button></div>
     <div class="msg" id="updmsg"></div>
     <pre id="notes" style="display:none;margin:8px 0 0;max-height:120px;overflow:auto;font:12px/1.5 inherit;white-space:pre-wrap;color:var(--sub);user-select:text"></pre>
-    <div class="row" style="margin:12px 0 0"><span class="grow">起動時に自動で確認する</span><label class="sw"><input type="checkbox" id="autochk"><span></span></label></div>
+    <div class="row" style="margin:12px 0 0"><span class="grow" data-i18n="about.autochk"></span><label class="sw"><input type="checkbox" id="autochk"><span></span></label></div>
   </div>
-  <div class="card"><h3>設定のバックアップ</h3>
-    <p>ホットキー・テーマ・表示位置・履歴の上限・定型文を1つのファイル（JSON）に保存／復元します。履歴の中身は含まれません。</p>
-    <div class="row"><button class="btn" id="exp">エクスポート…</button><button class="btn" id="imp">インポート…</button></div>
+  <div class="card"><h3 data-i18n="about.bk_h"></h3>
+    <p data-i18n="about.bk_p"></p>
+    <div class="row"><button class="btn" id="exp" data-i18n="about.export"></button><button class="btn" id="imp" data-i18n="about.import"></button></div>
     <div class="msg" id="bkmsg"></div>
   </div>
-  <div class="card"><h3>データの場所</h3><p id="dir" style="user-select:text"></p><button class="btn" id="opendir">フォルダを開く</button></div>
+  <div class="card"><h3 data-i18n="about.dir_h"></h3><p id="dir" style="user-select:text"></p><button class="btn" id="opendir" data-i18n="about.open"></button></div>
 </section>
 
 </main>
 <script src="platform.js"></script>
+<script src="i18n.js"></script>
 <script src="themes.js"></script>
 <script>
 const { invoke } = window.__TAURI__.core;
@@ -232,18 +238,18 @@ function keyName(e) {
   return null;
 }
 async function applyHotkey(hk) {
-  try { await invoke('set_hotkey', { hotkey: hk }); $('hk').value = fmtHotkey(hk); say($('hkmsg'), '保存しました'); }
+  try { await invoke('set_hotkey', { hotkey: hk }); $('hk').value = fmtHotkey(hk); say($('hkmsg'), t('common.saved')); }
   catch (err) { say($('hkmsg'), String(err), true); $('hk').value = fmtHotkey((await invoke('get_settings')).hotkey); }
 }
-$('hk').addEventListener('focus', () => { $('hk').classList.add('rec'); say($('hkmsg'), 'キーを押してください…'); });
+$('hk').addEventListener('focus', () => { $('hk').classList.add('rec'); say($('hkmsg'), t('gen.press')); });
 $('hk').addEventListener('blur', () => $('hk').classList.remove('rec'));
 $('hk').addEventListener('keydown', (e) => {
   e.preventDefault();
   if (['Control', 'Shift', 'Alt', 'Meta'].includes(e.key)) return;
   const k = keyName(e);
   const mods = [e.ctrlKey && 'Ctrl', e.altKey && 'Alt', e.shiftKey && 'Shift', e.metaKey && 'Super'].filter(Boolean);
-  if (!k) return say($('hkmsg'), 'このキーは使えません', true);
-  if (!mods.length) return say($('hkmsg'), `${modsHelp()} のいずれかと組み合わせてください`, true);
+  if (!k) return say($('hkmsg'), t('gen.badkey'), true);
+  if (!mods.length) return say($('hkmsg'), t('gen.needmod', { mods: modsHelp() }), true);
   applyHotkey([...mods, k].join('+')); $('hk').blur();
 });
 $('hkreset').addEventListener('click', () => applyHotkey('Ctrl+Alt+V'));
@@ -252,7 +258,7 @@ $('pos').addEventListener('change', (e) => {
   document.querySelectorAll('#pos label').forEach((l) => l.classList.toggle('on', l.querySelector('input').checked));
 });
 $('auto').addEventListener('change', async () => {
-  try { await invoke('set_autostart', { enabled: $('auto').checked }); say($('automsg'), '保存しました'); }
+  try { await invoke('set_autostart', { enabled: $('auto').checked }); say($('automsg'), t('common.saved')); }
   catch (err) { say($('automsg'), String(err), true); $('auto').checked = !$('auto').checked; }
 });
 
@@ -273,28 +279,28 @@ const QM_NAME = IS_MAC
   : { Ctrl: 'Ctrl', Alt: 'Alt', Shift: 'Shift', Super: 'Win' };
 
 function saveKeys() {
-  return invoke('set_keys', { keys: K }).then(() => keymsg('保存しました'), (err) => keymsg(String(err), true));
+  return invoke('set_keys', { keys: K }).then(() => keymsg(t('common.saved')), (err) => keymsg(String(err), true));
 }
 function drawKeys() {
   if (!K) return;
   $('keyrows').innerHTML = KEY_ACTIONS.map(([act, label]) =>
-    `<div class="krow"><span class="lab">${label}</span><span class="chips">` +
-    (K[act] || []).map((c, i) => `<span class="kc"><kbd>${esc(fmtHotkey(c))}</kbd><b data-act="${act}" data-i="${i}" title="外す">×</b></span>`).join('') +
-    `<button class="btn add${capturing === act ? ' rec' : ''}" data-act="${act}">${capturing === act ? 'キーを押す…' : '＋'}</button></span></div>`
+    `<div class="krow"><span class="lab">${t(label)}</span><span class="chips">` +
+    (K[act] || []).map((c, i) => `<span class="kc"><kbd>${esc(fmtHotkey(c))}</kbd><b data-act="${act}" data-i="${i}" title="${t('keys.remove')}">×</b></span>`).join('') +
+    `<button class="btn add${capturing === act ? ' rec' : ''}" data-act="${act}">${capturing === act ? t('keys.press_btn') : '＋'}</button></span></div>`
   ).join('');
   $('quickmod').innerHTML = ['Ctrl', 'Alt', 'Shift', 'Super'].map((m) => `<option value="${m}">${QM_NAME[m]}</option>`).join('');
   $('quickmod').value = K.quick_mod; $('bare').checked = K.bare_digits;
-  $('qexample').textContent = combo([K.quick_mod], '1');
+  $('qsub').textContent = t('keys.quick_s', { ex: combo([K.quick_mod], '1') });
 }
 $('keyrows').addEventListener('click', (e) => {
   const rm = e.target.closest('b[data-act]');
   if (rm) {
     const act = rm.dataset.act;
-    if ((act === 'choose' || act === 'close') && K[act].length <= 1) return keymsg('この操作には、1つ以上のキーが必要です', true);
+    if ((act === 'choose' || act === 'close') && K[act].length <= 1) return keymsg(t('keys.min1'), true);
     K[act].splice(Number(rm.dataset.i), 1); capturing = null; drawKeys(); saveKeys(); return;
   }
   const add = e.target.closest('button.add');
-  if (add) { capturing = capturing === add.dataset.act ? null : add.dataset.act; keymsg(capturing ? 'キーを押してください（Esc でキャンセル）' : ''); drawKeys(); }
+  if (add) { capturing = capturing === add.dataset.act ? null : add.dataset.act; keymsg(capturing ? t('keys.press_msg') : ''); drawKeys(); }
 });
 document.addEventListener('keydown', (e) => {
   if (!capturing || e.isComposing || e.keyCode === 229) return;
@@ -304,7 +310,7 @@ document.addEventListener('keydown', (e) => {
   if (!c) return; // 修飾キーだけ・未対応のキー
   const bad = bindingProblem(c);
   if (bad) return keymsg(bad, true);
-  for (const [a, label] of KEY_ACTIONS) if ((K[a] || []).includes(c)) return keymsg(`${fmtHotkey(c)} は「${label}」に割り当て済みです`, true);
+  for (const [a, label] of KEY_ACTIONS) if ((K[a] || []).includes(c)) return keymsg(t('keys.assigned', { key: fmtHotkey(c), action: t(label) }), true);
   K[capturing].push(c); capturing = null; drawKeys(); saveKeys();
 }, true);
 $('quickmod').addEventListener('change', () => { K.quick_mod = $('quickmod').value; drawKeys(); saveKeys(); });
@@ -314,12 +320,12 @@ $('keyreset').addEventListener('click', () => { K = JSON.parse(JSON.stringify(DE
 /* ---------- look ---------- */
 let curTheme = 'auto';
 function drawThemes() {
-  $('themes').innerHTML = THEMES.map((t) => {
-    const v = t.v;
+  $('themes').innerHTML = THEMES.map((th) => {
+    const v = th.v;
     const sample = v
-      ? `<div class="sample" style="background:${v.bg};color:${v.fg}"><div class="l1"><span class="dot" style="background:${v.accent}"></span>clp</div><div class="l2" style="background:${v.sel}">選択行</div></div>`
+      ? `<div class="sample" style="background:${v.bg};color:${v.fg}"><div class="l1"><span class="dot" style="background:${v.accent}"></span>clp</div><div class="l2" style="background:${v.sel}">${t('theme.sample')}</div></div>`
       : `<div class="sample" style="background:linear-gradient(100deg,#fbfbfc 50%,#232326 50%);color:#888;text-align:center;padding-top:16px;font-size:13px">Auto</div>`;
-    return `<div class="th${t.id === curTheme ? ' on' : ''}" data-id="${t.id}">${sample}${t.name}</div>`;
+    return `<div class="th${th.id === curTheme ? ' on' : ''}" data-id="${th.id}">${sample}${t('theme.' + th.id)}</div>`;
   }).join('');
 }
 $('themes').addEventListener('click', (e) => {
@@ -329,79 +335,80 @@ $('themes').addEventListener('click', (e) => {
 });
 
 /* ---------- history ---------- */
-async function refreshCount() { $('count').textContent = (await invoke('get_settings')).count; }
+const setCount = (n) => { $('clrp').textContent = t('hist.clear_p', { n }); };
+async function refreshCount() { setCount((await invoke('get_settings')).count); }
 function saveLimits() {
   const mi = Math.max(50, Math.min(100000, Number($('maxitems').value) || 3000));
   const mk = Math.max(1, Math.min(20000, Number($('maxkb').value) || 1024));
   $('maxitems').value = mi; $('maxkb').value = mk;
-  invoke('set_limits', { maxItems: mi, maxKb: mk }).then(() => { say($('limmsg'), '保存しました'); refreshCount(); });
+  invoke('set_limits', { maxItems: mi, maxKb: mk }).then(() => { say($('limmsg'), t('common.saved')); refreshCount(); });
 }
 $('maxitems').addEventListener('change', saveLimits);
 $('maxkb').addEventListener('change', saveLimits);
 let clrTimer;
 $('clear').addEventListener('click', async () => {
   if (!$('clear').dataset.arm) {
-    $('clear').dataset.arm = 1; $('clear').textContent = '本当に削除する（もう一度クリック）';
-    clrTimer = setTimeout(() => { delete $('clear').dataset.arm; $('clear').textContent = '履歴をすべて削除'; }, 3000);
+    $('clear').dataset.arm = 1; $('clear').textContent = t('hist.clear_arm');
+    clrTimer = setTimeout(() => { delete $('clear').dataset.arm; $('clear').textContent = t('hist.clear_btn'); }, 3000);
     return;
   }
-  clearTimeout(clrTimer); delete $('clear').dataset.arm; $('clear').textContent = '履歴をすべて削除';
-  const n = await invoke('clear_history'); say($('clrmsg'), `${n} 件削除しました`); refreshCount();
+  clearTimeout(clrTimer); delete $('clear').dataset.arm; $('clear').textContent = t('hist.clear_btn');
+  const n = await invoke('clear_history'); say($('clrmsg'), t('hist.cleared', { n })); refreshCount();
 });
 $('opendir').addEventListener('click', () => invoke('open_dir'));
 
 /* ---------- excluded apps ---------- */
-$('exhelp').textContent = IS_MAC ? 'アプリ名か Bundle ID（例: 1password / com.agilebits.onepassword7）' : '実行ファイル名（例: KeePass.exe）';
+const drawExpHelp = () => { $('exptxt').textContent = t('hist.excl_p', { hint: t(IS_MAC ? 'hist.excl_hint_mac' : 'hist.excl_hint_win') }); };
 const exLines = () => $('excl').value.split('\n').map((s) => s.trim()).filter(Boolean);
 async function drawRecent() {
   const cur = new Set(exLines().map((s) => s.toLowerCase()));
   const rec = (await invoke('recent_apps')).filter((a) => !cur.has(a));
   $('recent').innerHTML = rec.length
     ? rec.map((a) => `<button class="btn" data-a="${a.replace(/"/g, '&quot;')}">+ ${a.replace(/</g, '&lt;')}</button>`).join('')
-    : '<span style="opacity:.6">（まだありません。何かコピーすると出ます）</span>';
+    : `<span style="opacity:.6">${t('hist.recent_none')}</span>`;
 }
 function saveExcl() {
-  invoke('set_excludes', { list: exLines() }).then(() => { say($('exmsg'), '保存しました'); drawRecent(); });
+  invoke('set_excludes', { list: exLines() }).then(() => { say($('exmsg'), t('common.saved')); drawRecent(); });
 }
 $('excl').addEventListener('change', saveExcl);
 $('recent').addEventListener('click', (e) => {
   const b = e.target.closest('button'); if (!b) return;
   $('excl').value = (exLines().concat(b.dataset.a)).join('\n'); saveExcl();
 });
-invoke('get_excludes').then((l) => { $('excl').value = l.join('\n'); drawRecent(); });
+I18N_READY.then(() => invoke('get_excludes')).then((l) => { drawExpHelp(); $('excl').value = l.join('\n'); drawRecent(); });
 window.addEventListener('focus', drawRecent);
 
 /* ---------- update ---------- */
 function showUpdate(u) {
-  const aboutBtn = document.querySelector('nav button[data-p=about]');
+  const dot = document.querySelector('nav button[data-p=about] .dot');
   if (u) {
-    say($('updmsg'), `新しい版 v${u.version} があります`);
-    $('upd').style.display = ''; $('upd').textContent = `v${u.version} に更新`;
+    say($('updmsg'), t('about.has', { v: u.version }));
+    $('upd').style.display = ''; $('upd').textContent = t('about.upd_to', { v: u.version });
     if (u.notes) { $('notes').textContent = u.notes; $('notes').style.display = ''; }
-    aboutBtn.textContent = 'ℹ 情報 ●';
+    dot.hidden = false;
   } else {
-    say($('updmsg'), '最新の版です'); $('upd').style.display = 'none'; $('notes').style.display = 'none';
-    aboutBtn.textContent = 'ℹ 情報';
+    say($('updmsg'), t('about.latest')); $('upd').style.display = 'none'; $('notes').style.display = 'none';
+    dot.hidden = true;
   }
 }
 $('chk').addEventListener('click', async () => {
-  say($('updmsg'), '確認中…'); $('chk').disabled = true;
+  say($('updmsg'), t('about.checking')); $('chk').disabled = true;
   try { showUpdate(await invoke('check_update')); } catch (err) { say($('updmsg'), String(err), true); }
   $('chk').disabled = false;
 });
 $('upd').addEventListener('click', async () => {
-  $('upd').disabled = true; say($('updmsg'), 'ダウンロードして更新中…（完了すると自動で再起動します）');
+  $('upd').disabled = true; say($('updmsg'), t('about.updating'));
   try { await invoke('install_update'); } catch (err) { say($('updmsg'), String(err), true); $('upd').disabled = false; }
 });
 $('autochk').addEventListener('change', () => invoke('set_check_updates', { enabled: $('autochk').checked }));
 
 /* ---------- backup ---------- */
 $('exp').addEventListener('click', async () => {
-  try { const p = await invoke('export_settings'); if (p) say($('bkmsg'), '保存しました: ' + p); }
+  try { const p = await invoke('export_settings'); if (p) say($('bkmsg'), t('about.saved_to', { p })); }
   catch (err) { say($('bkmsg'), String(err), true); }
 });
 $('imp').addEventListener('click', async () => {
-  if (!confirm('現在の設定と定型文を、ファイルの内容で置き換えます。よろしいですか？')) return;
+  if (!confirm(t('about.import_confirm'))) return;
   try {
     const m = await invoke('import_settings');
     if (m) { say($('bkmsg'), m); setTimeout(() => location.reload(), 1200); }
@@ -420,8 +427,8 @@ async function loadSnips() {
     drawSnips();
   } catch (err) {
     loaded = false; list = [];
-    $('sbanner').innerHTML = `<div class="banner">snippets.toml に書式エラーがあります。ファイルを直すと自動で読み込まれます。\n${esc(String(err))}</div>` +
-      `<button class="btn" id="sopen">snippets.toml を開く</button> <button class="btn" id="sreload">再読み込み</button>`;
+    $('sbanner').innerHTML = `<div class="banner">${esc(t('snip.err'))}\n${esc(String(err))}</div>` +
+      `<button class="btn" id="sopen">${t('snip.open')}</button> <button class="btn" id="sreload">${t('snip.reload')}</button>`;
     $('sopen').onclick = () => invoke('open_snippets'); $('sreload').onclick = loadSnips;
     drawSnips();
   }
@@ -432,8 +439,8 @@ function drawSnips() {
   $('sadd').disabled = !loaded || list.length >= MAX_SNIP;
   $('slist').innerHTML = list.length
     ? list.map((s, i) => `<div class="si${i === idx ? ' on' : ''}" draggable="true" data-i="${i}"><span class="n">${i < 10 ? (i + 1) % 10 : ''}</span>` +
-        `<span class="t"><b>${esc(s.title) || '(無題)'}</b><small>${esc(s.body.replace(/\s+/g, ' ')) || '&nbsp;'}</small></span></div>`).join('')
-    : `<div class="empty">${loaded ? '定型文がありません<br>「＋ 追加」で作成します' : ''}</div>`;
+        `<span class="t"><b>${esc(s.title) || t('snip.untitled')}</b><small>${esc(s.body.replace(/\s+/g, ' ')) || '&nbsp;'}</small></span></div>`).join('')
+    : `<div class="empty">${loaded ? t('snip.empty') : ''}</div>`;
   drawEditor();
 }
 
@@ -441,13 +448,13 @@ function drawEditor() {
   const s = list[idx];
   if (!s) { $('sed').innerHTML = ''; return; }
   $('sed').innerHTML =
-    `<input type="text" id="stitle" placeholder="タイトル（一覧と検索に使われます）" value="${esc(s.title)}">` +
-    `<textarea id="sbody" placeholder="貼り付けるテキスト" spellcheck="false"></textarea>` +
-    `<div class="chips">変数を挿入: ${['{date}', '{time}', '{datetime}', '{clipboard}'].map((v) => `<span class="chip" data-v="${v}">${v}</span>`).join('')}</div>` +
-    `<div class="bar"><button class="btn" id="sup">↑ 上へ</button><button class="btn" id="sdown">↓ 下へ</button><button class="btn" id="sdup">複製</button>` +
-    `<button class="btn danger" id="sdel" style="margin-left:auto">削除</button></div>`;
+    `<input type="text" id="stitle" placeholder="${esc(t('snip.ph_title'))}" value="${esc(s.title)}">` +
+    `<textarea id="sbody" placeholder="${esc(t('snip.ph_body'))}" spellcheck="false"></textarea>` +
+    `<div class="chips">${t('snip.vars')} ${['{date}', '{time}', '{datetime}', '{clipboard}'].map((v) => `<span class="chip" data-v="${v}">${v}</span>`).join('')}</div>` +
+    `<div class="bar"><button class="btn" id="sup">${t('snip.up')}</button><button class="btn" id="sdown">${t('snip.down')}</button><button class="btn" id="sdup">${t('snip.dup')}</button>` +
+    `<button class="btn danger" id="sdel" style="margin-left:auto">${t('snip.del')}</button></div>`;
   $('sbody').value = s.body;
-  $('stitle').oninput = () => { list[idx].title = $('stitle').value; const b = $('slist').children[idx]; if (b) b.querySelector('b').textContent = list[idx].title || '(無題)'; queueSave(); };
+  $('stitle').oninput = () => { list[idx].title = $('stitle').value; const b = $('slist').children[idx]; if (b) b.querySelector('b').textContent = list[idx].title || t('snip.untitled'); queueSave(); };
   $('sbody').oninput = () => { list[idx].body = $('sbody').value; const b = $('slist').children[idx]; if (b) b.querySelector('small').textContent = list[idx].body.replace(/\s+/g, ' ') || ' '; queueSave(); };
   $('sed').querySelectorAll('.chip').forEach((c) => c.onclick = () => {
     const t = $('sbody'), a = t.selectionStart, b = t.selectionEnd;
@@ -455,10 +462,10 @@ function drawEditor() {
   });
   $('sup').onclick = () => move(idx, idx - 1);
   $('sdown').onclick = () => move(idx, idx + 1);
-  $('sdup').onclick = () => { if (list.length < MAX_SNIP) { list.splice(idx + 1, 0, { ...list[idx], title: list[idx].title + ' (コピー)' }); idx++; drawSnips(); queueSave(); } };
+  $('sdup').onclick = () => { if (list.length < MAX_SNIP) { list.splice(idx + 1, 0, { ...list[idx], title: list[idx].title + ' ' + t('snip.copy') }); idx++; drawSnips(); queueSave(); } };
   let arm;
   $('sdel').onclick = () => {
-    if (!arm) { arm = 1; $('sdel').textContent = '本当に削除'; setTimeout(() => { arm = 0; if ($('sdel')) $('sdel').textContent = '削除'; }, 3000); return; }
+    if (!arm) { arm = 1; $('sdel').textContent = t('snip.del_confirm'); setTimeout(() => { arm = 0; if ($('sdel')) $('sdel').textContent = t('snip.del'); }, 3000); return; }
     list.splice(idx, 1); idx = Math.max(0, Math.min(idx, list.length - 1)); drawSnips(); queueSave();
   };
 }
@@ -480,34 +487,44 @@ $('slist').addEventListener('drop', (e) => {
 });
 $('sadd').addEventListener('click', () => {
   if (list.length >= MAX_SNIP) return;
-  list.push({ title: '新しい定型文', body: '' }); idx = list.length - 1; drawSnips(); queueSave();
+  list.push({ title: t('snip.new'), body: '' }); idx = list.length - 1; drawSnips(); queueSave();
   $('stitle').focus(); $('stitle').select();
 });
 
 function queueSave() {
-  dirty = true; say($('sstat'), '編集中…');
+  dirty = true; say($('sstat'), t('snip.editing'));
   clearTimeout(saveTimer);
   saveTimer = setTimeout(async () => {
-    try { await invoke('save_snippets', { list }); dirty = false; say($('sstat'), '保存しました ✓'); }
-    catch (err) { say($('sstat'), '保存に失敗: ' + err, true); }
+    try { await invoke('save_snippets', { list }); dirty = false; say($('sstat'), t('snip.saved')); }
+    catch (err) { say($('sstat'), t('snip.fail', { e: err }), true); }
   }, 500);
 }
 
 window.addEventListener('focus', () => { if ($('p-snip').classList.contains('on')) loadSnips(); });
 
+/* ---------- language ---------- */
+async function initLang(cur) {
+  const langs = await invoke('list_langs');
+  $('lang').innerHTML = `<option value="auto">${esc(t('gen.lang_auto'))}</option>` + langs.map(([c, n]) => `<option value="${esc(c)}">${esc(n)}</option>`).join('');
+  $('lang').value = cur || 'auto';
+}
+$('lang').addEventListener('change', async () => { await invoke('set_language', { language: $('lang').value }); location.reload(); });
+$('opendir2').addEventListener('click', () => invoke('open_dir'));
+
 /* ---------- init ---------- */
-invoke('get_settings').then((s) => {
-  S = s;
+I18N_READY.then(() => invoke('get_settings')).then((s) => {
+  S = s; document.title = t('set.title');
+  initLang(s.language);
   $('hk').value = fmtHotkey(s.hotkey); $('auto').checked = s.autostart;
-  $('hkreset').textContent = `既定に戻す (${fmtHotkey('Ctrl+Alt+V')})`;
+  $('hkreset').textContent = `${t('gen.reset')} (${fmtHotkey('Ctrl+Alt+V')})`;
   UI.closeOnBlur = s.close_on_blur; UI.fontSize = s.font_size;
   $('blur').checked = UI.closeOnBlur; $('fontsize').value = String(UI.fontSize);
   $('fxshadow').checked = s.shadow; $('fxglass').checked = s.glass;
   invoke('get_keys').then((k) => { K = { ...DEFAULT_KEYS, ...k }; drawKeys(); });
   curTheme = s.theme; applyTheme(curTheme); drawThemes();
   const r = document.querySelector(`input[name=pos][value=${s.position}]`); if (r) { r.checked = true; r.closest('label').classList.add('on'); }
-  $('maxitems').value = s.max_items; $('maxkb').value = s.max_kb; $('count').textContent = s.count; $('dir').textContent = s.data_dir;
-  $('ver').textContent = 'v' + s.version; $('autochk').checked = s.check_updates;
+  $('maxitems').value = s.max_items; $('maxkb').value = s.max_kb; setCount(s.count); $('dir').textContent = s.data_dir;
+  $('verp').textContent = t('about.ver_p', { v: 'v' + s.version }); $('autochk').checked = s.check_updates;
   if (s.update_available) showUpdate({ version: s.update_available, notes: '' });
 });
 </script>

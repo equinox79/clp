@@ -41,7 +41,7 @@ pub fn set_autostart(enabled: bool) -> Result<(), String> {
     }
     .map(|s| s.success())
     .unwrap_or(false);
-    if ok || !enabled { Ok(()) } else { Err("レジストリの更新に失敗しました".into()) }
+    if ok || !enabled { Ok(()) } else { Err("err.autostart".into()) }
 }
 
 pub fn open_folder(p: &Path) {

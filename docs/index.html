@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>clp</title>
+<meta name="description" content="">
+<meta property="og:title" content="clp">
+<meta property="og:description" content="">
+<style>
+:root{--bg:#101216;--fg:#e8eaee;--sub:#a0a6b2;--line:#2a2f39;--acc:#6c9bff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.8 "Yu Gothic UI","Hiragino Sans","Segoe UI",system-ui,sans-serif}
+a{color:var(--acc)}
+.wrap{max-width:860px;margin:0 auto;padding:0 22px}
+header{padding:22px 0;display:flex;justify-content:space-between;align-items:center}
+.logo{font-weight:800;font-size:20px}
+header select{background:#171a21;color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:4px 8px;font:inherit;font-size:13px;margin-left:14px}
+header a{color:var(--sub);text-decoration:none;font-size:14px;margin-left:18px}
+h1{font-size:36px;line-height:1.3;margin:36px 0 12px}
+h2{font-size:20px;margin:48px 0 12px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+p{margin:0 0 12px}
+.sub{color:var(--sub)}
+.btns{margin:20px 0 6px;display:flex;gap:10px;flex-wrap:wrap}
+.btn{display:inline-block;padding:9px 20px;border-radius:8px;text-decoration:none;border:1px solid var(--line);color:var(--fg);font-weight:600}
+.btn.main{background:var(--acc);border-color:var(--acc);color:#0c1020}
+ul{margin:0;padding-left:20px}
+li{margin:4px 0}
+table{width:100%;border-collapse:collapse;font-size:15px}
+td,th{padding:7px 10px;border-bottom:1px solid var(--line);text-align:left}
+th{color:var(--sub);font-weight:600}
+kbd,code{background:#1d212b;border:1px solid #333a48;border-radius:5px;padding:0 6px;font:13px Consolas,monospace}
+footer{margin:56px 0 40px;padding-top:18px;border-top:1px solid var(--line);color:var(--sub);font-size:14px}
+
+.flow{display:flex;align-items:stretch;gap:10px;margin:34px 0 4px}
+.flow .st{flex:1;background:#171a21;border:1px solid var(--line);border-radius:14px;padding:18px 16px;text-align:center}
+.flow .st b{display:block;margin:8px 0 4px}
+.flow .st span{display:block;font-size:13.5px;color:var(--sub);line-height:1.6}
+.flow .ar{align-self:center;color:var(--sub);font-size:22px}
+.flow .ic svg{width:52px;height:52px;fill:none;stroke:var(--acc);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.flow .ic svg .f{fill:#171a21}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:12px}
+.cd{background:#171a21;border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.cd i{display:inline-grid;place-items:center;width:32px;height:32px;border-radius:9px;background:#212a40;color:var(--acc);font-style:normal;font-size:17px;margin-bottom:6px}
+.cd b{display:block;margin-bottom:2px}
+.cd span{display:block;font-size:13.5px;color:var(--sub);line-height:1.65}
+@media(max-width:640px){.flow{flex-direction:column}.flow .ar{transform:rotate(90deg)}}
+body{background:radial-gradient(900px 420px at 50% -80px,#1c2a4d 0,transparent 70%) no-repeat,var(--bg)}
+.hero{text-align:center;padding-top:28px}
+.badges{display:flex;gap:8px;justify-content:center;margin-bottom:18px}
+.badges span{font-size:12px;letter-spacing:.06em;color:var(--sub);border:1px solid var(--line);border-radius:20px;padding:2px 12px;background:#14171d}
+.hero h1{font-size:clamp(30px,6vw,52px);line-height:1.28;margin:0 0 16px;letter-spacing:-.5px}
+.hero h1 em{font-style:normal;background:linear-gradient(90deg,#8db0ff,#b99cff);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero .lead{max-width:620px;margin:0 auto 6px;color:var(--sub);font-size:16.5px}
+.hero .btns{justify-content:center;margin:22px 0 34px}
+.btn.main{box-shadow:0 6px 24px #6c9bff44}
+.stage{max-width:700px;margin:0 auto;text-align:left;position:relative}
+.stage::before{content:"";position:absolute;inset:30px -30px -30px;background:radial-gradient(closest-side,#6c9bff22,transparent);z-index:-1}
+.list{scrollbar-width:thin;scrollbar-color:#444a58 transparent}
+.stage .tip{font-size:12.5px;color:var(--sub);margin-bottom:8px;text-align:center}
+.stage .out{text-align:center}
+.flow{margin-top:56px}
+/* demo */
+.demo .hint{font-size:13px;color:var(--sub);margin-bottom:8px}
+.win{background:#232326;border:1px solid #38383d;border-radius:12px;overflow:hidden;font-size:14px;color:#ececee;user-select:none;box-shadow:0 20px 60px #0008}
+.win:focus-within{border-color:#6c9bff}
+.hd{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid #38383d}
+.hd input{flex:1;border:0;outline:0;background:transparent;color:#ececee;font-size:16px;font-family:inherit;user-select:text;min-width:0}
+.hd input::placeholder{color:#b4b4bd;opacity:.8}
+.tabs{display:flex;gap:2px;font-size:12px}
+.tabs span{padding:2px 9px;border-radius:10px;color:#b4b4bd;cursor:pointer}
+.tabs .on{background:#6c9bff;color:#10131a}
+.list{height:176px;overflow-y:auto}
+.it{display:flex;gap:8px;padding:5px 14px;align-items:baseline;cursor:default}
+.it.sel{background:#2f3d5c}
+.it .n{width:14px;text-align:right;font-size:11px;color:#b4b4bd;flex:none}
+.it .l{font-weight:600;flex:none}
+.it .t{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.it .d{font-size:11px;color:#b4b4bd;flex:none}
+.win mark{background:#6b5a12;color:inherit;border-radius:2px}
+.pv{margin:0;height:92px;overflow:hidden;padding:8px 14px;border-top:1px solid #38383d;font:12px/1.4 Consolas,"Cascadia Mono",monospace;color:#b4b4bd;white-space:pre-wrap;word-break:break-all}
+.c{color:#6c9bff;opacity:.85}
+.kh{padding:4px 14px;font-size:11px;color:#b4b4bd;border-top:1px solid #38383d}
+.out{margin-top:10px;font-size:13px;color:var(--sub);min-height:1.8em}
+.out pre{display:inline;margin:0;font:13px Consolas,monospace;color:var(--fg);white-space:pre-wrap}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="logo">clp</div>
+  <nav><a href="#demo" data-i18n="nav.demo"></a><a href="#features" data-i18n="nav.features"></a><a href="#install" data-i18n="nav.install"></a><a href="https://github.com/equinox79/clp">GitHub</a><select id="langsel" aria-label="Language"></select></nav>
+</header>
+
+<section class="hero" id="demo">
+  <div class="badges"><span>Windows</span><span>macOS</span><span>MIT License</span></div>
+  <h1 data-i18n-html="h1"></h1>
+  <p class="lead" data-i18n="lead"></p>
+  <div class="btns">
+    <a class="btn main" href="https://github.com/equinox79/clp/releases/latest" data-i18n="dl"></a>
+    <a class="btn" href="https://github.com/equinox79/clp">GitHub</a>
+  </div>
+  <div class="stage">
+    <div class="tip" data-i18n="tip"></div>
+    <div class="demo">
+  <div class="win">
+    <div class="hd">
+      <input id="q" data-i18n-ph="q_ph" autocomplete="off" spellcheck="false">
+      <div class="tabs"><span id="th" class="on" data-i18n="tab_h"></span><span id="ts" data-i18n="tab_s"></span></div>
+    </div>
+    <div class="list" id="list"></div>
+    <pre class="pv" id="pv"></pre>
+    <div class="kh" data-i18n="kh"></div>
+  </div>
+  <div class="out" id="out"></div>
+</div>
+  </div>
+</section>
+
+<div class="flow">
+  <div class="st"><div class="ic"><svg viewBox="0 0 48 48"><rect x="14" y="9" width="22" height="30" rx="3"/><rect x="10" y="13" width="22" height="30" rx="3" class="f"/><path d="M15 24h12M15 30h12M15 36h7"/></svg></div><b data-i18n="s1h"></b><span data-i18n-html="s1p"></span></div>
+  <div class="ar">→</div>
+  <div class="st"><div class="ic"><svg viewBox="0 0 48 48"><rect x="5" y="12" width="38" height="24" rx="4"/><path d="M12 20h5M20 20h5M28 20h5M12 28h24"/></svg></div><b data-i18n="s2h"></b><span data-i18n-html="s2p"></span></div>
+  <div class="ar">→</div>
+  <div class="st"><div class="ic"><svg viewBox="0 0 48 48"><circle cx="21" cy="21" r="11"/><path d="M29 29l12 12"/></svg></div><b data-i18n="s3h"></b><span data-i18n-html="s3p"></span></div>
+</div>
+
+<h2 id="features" data-i18n="feat"></h2>
+<div class="grid">
+  <div class="cd"><i>⌕</i><b data-i18n="f.search"></b><span data-i18n-html="f.search.p"></span></div>
+  <div class="cd"><i>▤</i><b data-i18n="f.snip"></b><span data-i18n-html="f.snip.p"></span></div>
+  <div class="cd"><i>✂</i><b data-i18n="f.trim"></b><span data-i18n-html="f.trim.p"></span></div>
+  <div class="cd"><i>↵</i><b data-i18n="f.ctl"></b><span data-i18n-html="f.ctl.p"></span></div>
+  <div class="cd"><i>⊘</i><b data-i18n="f.excl"></b><span data-i18n-html="f.excl.p"></span></div>
+  <div class="cd"><i>◐</i><b data-i18n="f.look"></b><span data-i18n-html="f.look.p"></span></div>
+  <div class="cd"><i>⌨</i><b data-i18n="f.keys"></b><span data-i18n-html="f.keys.p"></span></div>
+  <div class="cd"><i>⇅</i><b data-i18n="f.backup"></b><span data-i18n-html="f.backup.p"></span></div>
+  <div class="cd"><i>⟳</i><b data-i18n="f.update"></b><span data-i18n-html="f.update.p"></span></div>
+  <div class="cd"><i>⌂</i><b data-i18n="f.tray"></b><span data-i18n-html="f.tray.p"></span></div>
+  <div class="cd"><i>T</i><b data-i18n="f.text"></b><span data-i18n-html="f.text.p"></span></div>
+  <div class="cd"><i>●</i><b data-i18n="f.data"></b><span data-i18n-html="f.data.p"></span></div>
+  <div class="cd"><i>文</i><b data-i18n="f.lang"></b><span data-i18n-html="f.lang.p"></span></div>
+</div>
+
+<h2 data-i18n="keys"></h2>
+<table>
+  <tr><th data-i18n="th_a"></th><th>Windows</th><th>macOS</th></tr>
+  <tr><td data-i18n="k1"></td><td><kbd>Ctrl+Alt+V</kbd></td><td><kbd>⌃⌥V</kbd></td></tr>
+  <tr><td data-i18n="k2"></td><td><kbd>Enter</kbd></td><td><kbd>↩</kbd></td></tr>
+  <tr><td data-i18n="k3"></td><td><kbd>Alt+1</kbd>–<kbd>0</kbd></td><td><kbd>⌥1</kbd>–<kbd>0</kbd></td></tr>
+  <tr><td data-i18n="k4"></td><td><kbd>Tab</kbd></td><td><kbd>⇥</kbd></td></tr>
+  <tr><td data-i18n="k5"></td><td><kbd>Ctrl+P</kbd></td><td><kbd>⌃P</kbd></td></tr>
+  <tr><td data-i18n="k6"></td><td><kbd>Shift+Enter</kbd></td><td><kbd>⇧↩</kbd></td></tr>
+  <tr><td data-i18n="k7"></td><td><kbd>Ctrl+Enter</kbd></td><td><kbd>⌃↩</kbd></td></tr>
+</table>
+
+<h2 id="install" data-i18n="install"></h2>
+<p data-i18n-html="iwin"></p>
+<p data-i18n-html="imac"></p>
+<p data-i18n-html="imore"></p>
+<footer>clp — MIT License ／ <a href="https://github.com/equinox79/clp">GitHub</a> ／ <a href="https://github.com/equinox79/clp/issues">Issues</a></footer>
+</div>
+
+<script src="lang.js"></script>
+<script>
+let H = [], S = [];
+let L = 'en';
+const DEMO_DATA = (code) => { const d = DEMO[code === 'ja' ? 'ja' : 'en'];
+  return { h: d.h.map(([t, dd], i) => ({ id: i, text: t, d: dd })), s: d.s.map(([l, b], i) => ({ id: i, label: l, text: b, d: '' })) }; };
+
+const $ = (id) => document.getElementById(id);
+const q = $('q'), list = $('list'), pv = $('pv'), out = $('out');
+let mode = 'h', rows = [], sel = 0;
+
+const kata2hira = (s) => s.replace(/[ァ-ヶ]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60));
+const norm = (s) => kata2hira(s.normalize('NFKC').toLowerCase());
+const esc = (s) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+
+/* 先頭からの正規化後の長さで元の位置に対応づけ、元の文字列上でハイライトする（ﾎﾞ のような結合にも対応） */
+function highlight(text, terms) {
+  if (!terms.length) return esc(text);
+  const chars = [...text], map = [], join = [];
+  const n = norm(text);
+  let prev = 0;
+  chars.forEach((_, i) => {
+    const len = norm(chars.slice(0, i + 1).join('')).length;
+    for (let k = prev; k < len; k++) map[k] = i;
+    if (len <= prev && i > 0) join[i] = true; // 直前の文字と結合した文字（ﾟ など）
+    prev = Math.max(prev, len);
+  });
+  const hit = new Array(chars.length).fill(false);
+  for (const t of terms) { let p = 0; while ((p = n.indexOf(t, p)) >= 0) { for (let k = 0; k < t.length; k++) hit[map[p + k]] = true; p += t.length; } }
+  chars.forEach((_, i) => { if (join[i] && hit[i - 1]) hit[i] = true; });
+  let o = '', on = false;
+  chars.forEach((ch, i) => { if (hit[i] && !on) { o += '<mark>'; on = true; } if (!hit[i] && on) { o += '</mark>'; on = false; } o += esc(ch); });
+  return o + (on ? '</mark>' : '');
+}
+
+const flat = (t) => t.replace(/[\r\n\t]+/g, ' ').trim();
+
+function render() {
+  const terms = norm(q.value).split(/\s+/).filter(Boolean);
+  const src = mode === 'h' ? H : S;
+  rows = src.filter((r) => { const n = norm((r.label || '') + ' ' + r.text); return terms.every((t) => n.includes(t)); });
+  sel = Math.min(sel, Math.max(0, rows.length - 1));
+  list.innerHTML = rows.length ? rows.map((r, i) =>
+    `<div class="it${i === sel ? ' sel' : ''}" data-i="${i}"><span class="n">${mode === 's' && i < 10 ? (i + 1) % 10 : ''}</span>` +
+    (r.label ? `<span class="l">${highlight(r.label, terms)}</span>` : '') +
+    `<span class="t">${highlight(flat(r.text), terms)}</span><span class="d">${r.d}</span></div>`).join('')
+    : '<div class="it" style="padding:24px;justify-content:center;color:#b4b4bd">–</div>';
+  preview();
+}
+
+function visible(t) {
+  const c = (s) => `<span class="c">${s}</span>`;
+  return t.split(/(?<=\n)/).map((line) => {
+    const m = /^([\s\S]*?)(\n?)$/.exec(line);
+    let b = m[1];
+    const tw = /[ ]+$/.exec(b), trail = tw ? tw[0].length : 0;
+    if (trail) b = b.slice(0, -trail);
+    let o = '';
+    for (const ch of b) o += ch === '\t' ? c('→') + '\t' : ch === '　' ? c('□') : esc(ch);
+    if (trail) o += c('·'.repeat(trail));
+    return o + (m[2] ? c('↵') + '\n' : '');
+  }).join('');
+}
+
+function preview() { const r = rows[sel]; pv.innerHTML = r ? visible(r.text) : ''; }
+
+function move(d) {
+  if (!rows.length) return;
+  sel = (sel + d + rows.length) % rows.length;
+  render();
+  const el = list.children[sel]; if (el) el.scrollIntoView({ block: 'nearest' });
+}
+
+function paste(i, kind) {
+  const r = rows[i]; if (!r) return;
+  let t = r.text;
+  if (mode === 's') {
+    const d = new Date(), p = (x) => String(x).padStart(2, '0');
+    const date = `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+    t = t.replace('{datetime}', `${date} ${p(d.getHours())}:${p(d.getMinutes())}`).replace('{date}', date);
+  }
+  if (kind === 'trim') t = t.trim();
+  if (kind === 'oneline') t = t.split(/\r?\n/).map((s) => s.trim()).filter(Boolean).join(' ');
+  out.innerHTML = PAGE[L].out + ' <pre>' + esc(t).replace(/\n/g, '<span class="c">↵</span>\n') + '</pre>';
+}
+
+function setMode(m) {
+  mode = m; sel = 0;
+  $('th').classList.toggle('on', m === 'h'); $('ts').classList.toggle('on', m === 's');
+  render(); q.focus();
+}
+
+q.addEventListener('input', () => { sel = 0; render(); });
+$('th').onclick = () => setMode('h');
+$('ts').onclick = () => setMode('s');
+list.addEventListener('click', (e) => { const el = e.target.closest('.it[data-i]'); if (el) paste(+el.dataset.i); });
+q.addEventListener('keydown', (e) => {
+  if (e.isComposing || e.keyCode === 229) return;
+  const dm = /^Digit([0-9])$/.exec(e.code);
+  if (dm && e.altKey) { e.preventDefault(); paste((+dm[1] + 9) % 10); return; }
+  if (e.key === 'ArrowDown' || (e.ctrlKey && e.key === 'j')) { e.preventDefault(); move(1); }
+  else if (e.key === 'ArrowUp' || (e.ctrlKey && e.key === 'k')) { e.preventDefault(); move(-1); }
+  else if (e.key === 'Tab') { e.preventDefault(); setMode(mode === 'h' ? 's' : 'h'); }
+  else if (e.key === 'Enter') { e.preventDefault(); paste(sel, e.shiftKey ? 'trim' : e.ctrlKey ? 'oneline' : ''); }
+  else if (e.key === 'Escape') { q.value = ''; sel = 0; render(); }
+});
+/* ---------- language ---------- */
+function detectLang() {
+  const q0 = new URLSearchParams(location.search).get('lang');
+  const saved = localStorage.getItem('clp-lang');
+  for (const c of [q0, saved, ...(navigator.languages || [navigator.language])]) {
+    if (!c) continue;
+    if (PAGE[c]) return c;
+    const low = c.toLowerCase();
+    if (low.startsWith('zh')) return /tw|hk|mo|hant/.test(low) ? 'zh-TW' : 'zh-CN';
+    const base = low.split('-')[0];
+    if (PAGE[base]) return base;
+  }
+  return 'en';
+}
+function setLang(code) {
+  L = PAGE[code] ? code : 'en';
+  const P = PAGE[L], en = PAGE.en;
+  const g = (k) => (k in P ? P[k] : en[k]);
+  document.documentElement.lang = L;
+  document.title = g('title');
+  document.querySelector('meta[name=description]').content = g('desc');
+  document.querySelector('meta[property="og:title"]').content = g('title');
+  document.querySelector('meta[property="og:description"]').content = g('desc');
+  document.querySelectorAll('[data-i18n]').forEach((el) => { el.textContent = g(el.dataset.i18n); });
+  document.querySelectorAll('[data-i18n-html]').forEach((el) => { el.innerHTML = g(el.dataset.i18nHtml); });
+  document.querySelectorAll('[data-i18n-ph]').forEach((el) => { el.placeholder = g(el.dataset.i18nPh); });
+  const d = DEMO_DATA(L); H = d.h; S = d.s;
+  out.textContent = g('out0');
+  q.value = ''; sel = 0; render();
+  $('langsel').value = L;
+}
+$('langsel').innerHTML = LANGS.map(([c, n]) => `<option value="${c}">${n}</option>`).join('');
+$('langsel').addEventListener('change', () => { localStorage.setItem('clp-lang', $('langsel').value); setLang($('langsel').value); });
+setLang(detectLang());
+</script>
+</body>
+</html>

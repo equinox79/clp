@@ -109,7 +109,7 @@ impl Snippets {
                 eprintln!("snippets.toml parse error: {e}");
                 self.error = Some(e.to_string());
                 self.list = vec![Snippet {
-                    title: "⚠ snippets.toml の書式エラー".into(),
+                    title: "⚠ snippets.toml: format error".into(),
                     body: e.to_string(),
                     norm: String::new(),
                 }];

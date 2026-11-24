@@ -4,6 +4,7 @@ mod platform;
 #[cfg(target_os = "macos")]
 #[path = "platform_mac.rs"]
 mod platform;
+mod i18n;
 mod snippets;
 mod store;
 
@@ -34,6 +35,8 @@ struct AppState {
     keys: Mutex<Keys>,
     /// 履歴に残さないアプリ（小文字の実行ファイル名 / macOS はアプリ名・Bundle ID）
     exclude: Mutex<Vec<String>>,
+    /// 表示言語の設定値（"auto" または言語コード）
+    lang: Mutex<String>,
     /// 記録の一時停止（再起動で解除。保存しない）
     paused: AtomicBool,
     recent: Mutex<Vec<String>>,
@@ -109,6 +112,8 @@ struct Config {
     glass: bool,
     /// 履歴に残さないアプリ
     exclude_apps: Vec<String>,
+    /// 表示言語。"auto"（OS に合わせる）または言語コード（例: "ja"）
+    language: String,
     keys: Keys,
 }
 
@@ -126,6 +131,7 @@ impl Default for Config {
             shadow: default_shadow(),
             glass: false,
             exclude_apps: Vec::new(),
+            language: "auto".into(),
             keys: Keys::default(),
         }
     }
@@ -340,6 +346,7 @@ fn hide_window(app: AppHandle) {
 
 #[derive(Serialize)]
 struct Settings {
+    language: String,
     hotkey: String,
     theme: String,
     position: String,
@@ -381,9 +388,69 @@ fn save_config(st: &AppState) {
             shadow: st.shadow.load(Ordering::SeqCst),
             glass: st.glass.load(Ordering::SeqCst),
             exclude_apps: st.exclude.lock().unwrap().clone(),
+            language: st.lang.lock().unwrap().clone(),
             keys: st.keys.lock().unwrap().clone(),
         },
     );
+}
+
+/// 現在の表示言語で文言を取り出す（{name} を vars で置換）
+fn tr(app: &AppHandle, key: &str, vars: &[(&str, &str)]) -> String {
+    let st = app.state::<AppState>();
+    let setting = st.lang.lock().unwrap().clone();
+    i18n::tr(&st.dir, &setting, key, vars)
+}
+
+/// 言語ファイル（辞書）。コードは実際に使う言語
+#[tauri::command]
+fn get_dict(app: AppHandle) -> serde_json::Value {
+    let st = app.state::<AppState>();
+    let setting = st.lang.lock().unwrap().clone();
+    let code = i18n::resolve(&setting, &st.dir);
+    serde_json::json!({ "code": code, "dict": i18n::dict(&st.dir, &code) })
+}
+
+#[tauri::command]
+fn list_langs(app: AppHandle) -> Vec<(String, String)> {
+    i18n::list(&app.state::<AppState>().dir)
+}
+
+#[tauri::command]
+fn set_language(app: AppHandle, language: String) {
+    let st = app.state::<AppState>();
+    *st.lang.lock().unwrap() = language;
+    save_config(&st);
+    refresh_tray(&app);
+    let _ = app.emit("lang", ());
+}
+
+fn build_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
+    let paused = app.state::<AppState>().paused.load(Ordering::SeqCst);
+    let m_show = MenuItem::with_id(app, "show", tr(app, "tray.show", &[]), true, None::<&str>)?;
+    let m_pause = tauri::menu::CheckMenuItem::with_id(app, "pause", tr(app, "tray.pause", &[]), true, paused, None::<&str>)?;
+    let m_snip = MenuItem::with_id(app, "snip", tr(app, "tray.snippets", &[]), true, None::<&str>)?;
+    let m_set = MenuItem::with_id(app, "settings", tr(app, "tray.settings", &[]), true, None::<&str>)?;
+    let m_upd = MenuItem::with_id(app, "update", tr(app, "tray.update", &[]), true, None::<&str>)?;
+    let m_quit = MenuItem::with_id(app, "quit", tr(app, "tray.quit", &[]), true, None::<&str>)?;
+    Menu::with_items(app, &[&m_show, &m_pause, &m_snip, &m_set, &m_upd, &m_quit])
+}
+
+/// トレイのメニューとツールチップを、現在の言語・状態で作り直す
+fn refresh_tray(app: &AppHandle) {
+    let Some(t) = app.tray_by_id("main") else { return };
+    if let Ok(m) = build_menu(app) {
+        let _ = t.set_menu(Some(m));
+    }
+    let st = app.state::<AppState>();
+    let ver = st.update_available.lock().unwrap().clone();
+    let tip = if st.paused.load(Ordering::SeqCst) {
+        tr(app, "tray.tip_paused", &[])
+    } else if let Some(v) = ver {
+        tr(app, "tray.tip_update", &[("v", &v)])
+    } else {
+        "clp".to_string()
+    };
+    let _ = t.set_tooltip(Some(tip));
 }
 
 fn norm_apps(list: Vec<String>) -> Vec<String> {
@@ -423,13 +490,13 @@ fn get_keys(app: AppHandle) -> Keys {
 #[tauri::command]
 fn set_keys(app: AppHandle, keys: Keys) -> Result<(), String> {
     if keys.choose.is_empty() {
-        return Err("「貼り付けて閉じる」には、1つ以上のキーが必要です".into());
+        return Err(tr(&app, "err.keys_choose", &[]));
     }
     if keys.close.is_empty() {
-        return Err("「閉じる」には、1つ以上のキーが必要です".into());
+        return Err(tr(&app, "err.keys_close", &[]));
     }
     if !matches!(keys.quick_mod.as_str(), "Ctrl" | "Alt" | "Shift" | "Super") {
-        return Err("即貼り付けの修飾キーが不正です".into());
+        return Err(tr(&app, "err.keys_mod", &[]));
     }
     let st = app.state::<AppState>();
     *st.keys.lock().unwrap() = keys.clone();
@@ -479,16 +546,6 @@ struct UpdateInfo {
     notes: String,
 }
 
-fn set_tray_tip(app: &AppHandle, ver: Option<&str>) {
-    if let Some(t) = app.tray_by_id("main") {
-        let tip = match ver {
-            Some(v) => format!("clp — 新しい版 v{v} があります"),
-            None => "clp".to_string(),
-        };
-        let _ = t.set_tooltip(Some(tip));
-    }
-}
-
 /// GitHub Releases の latest.json を見て、新しい版があれば情報を返す
 #[tauri::command]
 async fn check_update(app: AppHandle) -> Result<Option<UpdateInfo>, String> {
@@ -498,17 +555,17 @@ async fn check_update(app: AppHandle) -> Result<Option<UpdateInfo>, String> {
         .map_err(|e| e.to_string())?
         .check()
         .await
-        .map_err(|e| format!("更新の確認に失敗しました: {e}"))?;
+        .map_err(|e| tr(&app, "err.update_check", &[("e", &e.to_string())]))?;
     let st = app.state::<AppState>();
     match found {
         Some(u) => {
             *st.update_available.lock().unwrap() = Some(u.version.clone());
-            set_tray_tip(&app, Some(&u.version));
+            refresh_tray(&app);
             Ok(Some(UpdateInfo { version: u.version.clone(), notes: u.body.clone().unwrap_or_default() }))
         }
         None => {
             *st.update_available.lock().unwrap() = None;
-            set_tray_tip(&app, None);
+            refresh_tray(&app);
             Ok(None)
         }
     }
@@ -523,11 +580,11 @@ async fn install_update(app: AppHandle) -> Result<(), String> {
         .map_err(|e| e.to_string())?
         .check()
         .await
-        .map_err(|e| format!("更新の確認に失敗しました: {e}"))?
-        .ok_or("更新はありません")?;
+        .map_err(|e| tr(&app, "err.update_check", &[("e", &e.to_string())]))?
+        .ok_or_else(|| tr(&app, "err.no_update", &[]))?;
     upd.download_and_install(|_, _| {}, || {})
         .await
-        .map_err(|e| format!("更新のインストールに失敗しました: {e}"))?;
+        .map_err(|e| tr(&app, "err.update_install", &[("e", &e.to_string())]))?;
     app.restart()
 }
 
@@ -586,6 +643,7 @@ fn set_theme(app: AppHandle, theme: String) {
 #[tauri::command]
 fn get_settings(app: AppHandle) -> Settings {
     Settings {
+        language: app.state::<AppState>().lang.lock().unwrap().clone(),
         hotkey: app.state::<AppState>().hotkey.lock().unwrap().clone(),
         theme: app.state::<AppState>().theme.lock().unwrap().clone(),
         position: app.state::<AppState>().position.lock().unwrap().clone(),
@@ -615,7 +673,7 @@ fn set_hotkey(app: AppHandle, hotkey: String) -> Result<(), String> {
     let _ = gs.unregister(old.as_str());
     if let Err(e) = gs.register(hotkey.as_str()) {
         let _ = gs.register(old.as_str());
-        return Err(format!("このキーは使えません（他のアプリが使用中の可能性）: {e}"));
+        return Err(tr(&app, "err.hotkey", &[("e", &e.to_string())]));
     }
     *st.hotkey.lock().unwrap() = hotkey.clone();
     save_config(&st);
@@ -673,7 +731,7 @@ async fn export_settings(app: AppHandle) -> Result<String, String> {
         .lock()
         .unwrap()
         .dto()
-        .map_err(|e| format!("snippets.toml に書式エラーがあるため書き出せません: {e}"))?;
+        .map_err(|e| tr(&app, "err.export_snip", &[("e", &e.to_string())]))?;
     let bundle = Bundle {
         version: 1,
         config: BundleCfg {
@@ -721,12 +779,12 @@ async fn import_settings(app: AppHandle) -> Result<String, String> {
     let path = p.into_path().map_err(|e| e.to_string())?;
     let text = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
     let b: Bundle = serde_json::from_str(&text)
-        .map_err(|e| format!("clp の設定ファイルとして読み込めません: {e}"))?;
+        .map_err(|e| tr(&app, "err.import_bad", &[("e", &e.to_string())]))?;
     if b.version > 1 {
-        return Err("このファイルは新しいバージョンの clp で作成されています".into());
+        return Err(tr(&app, "err.import_newer", &[]));
     }
     if b.snippets.len() > snippets::MAX_SNIPPETS {
-        return Err(format!("定型文が上限（{}個）を超えています", snippets::MAX_SNIPPETS));
+        return Err(tr(&app, "err.import_max", &[("n", &snippets::MAX_SNIPPETS.to_string())]));
     }
     let c = b.config;
     let n = b.snippets.len();
@@ -740,18 +798,18 @@ async fn import_settings(app: AppHandle) -> Result<String, String> {
     set_effects(app.clone(), c.shadow, c.glass);
     set_excludes(app.clone(), c.exclude_apps);
     if let Err(e) = set_keys(app.clone(), c.keys) {
-        return Err(format!("キー設定が不正です: {e}"));
+        return Err(tr(&app, "err.import_keys", &[("e", &e)]));
     }
-    let mut msg = format!("読み込みました（定型文 {n} 件）");
+    let mut msg = tr(&app, "import.ok", &[("n", &n.to_string())]);
     if let Err(e) = set_hotkey(app.clone(), c.hotkey.clone()) {
-        msg += &format!("。ただしホットキー {} は設定できませんでした（{e}）", c.hotkey);
+        msg += &tr(&app, "import.hk_fail", &[("k", &c.hotkey), ("e", &e)]);
     }
     Ok(msg)
 }
 
 #[tauri::command]
-fn set_autostart(enabled: bool) -> Result<(), String> {
-    platform::set_autostart(enabled)
+fn set_autostart(app: AppHandle, enabled: bool) -> Result<(), String> {
+    platform::set_autostart(enabled).map_err(|e| tr(&app, &e, &[]))
 }
 
 fn open_settings(app: &AppHandle) {
@@ -762,7 +820,7 @@ fn open_settings(app: &AppHandle) {
         return;
     }
     let _ = tauri::WebviewWindowBuilder::new(app, "settings", tauri::WebviewUrl::App("settings.html".into()))
-        .title("clp 設定")
+        .title(tr(app, "set.title", &[]))
         .inner_size(820.0, 600.0)
         .min_inner_size(700.0, 520.0)
         .center()
@@ -878,6 +936,7 @@ pub fn run() {
                 glass: AtomicBool::new(cfg.glass),
                 keys: Mutex::new(cfg.keys.clone()),
                 exclude: Mutex::new(norm_apps(cfg.exclude_apps.clone())),
+                lang: Mutex::new(cfg.language.clone()),
                 paused: AtomicBool::new(false),
                 recent: Mutex::new(Vec::new()),
                 update_available: Mutex::new(None),
@@ -891,14 +950,7 @@ pub fn run() {
                 eprintln!("hotkey register failed ({}): {e}", cfg.hotkey);
             }
 
-            let m_show = MenuItem::with_id(app, "show", "表示", true, None::<&str>)?;
-            let m_snip = MenuItem::with_id(app, "snip", "snippets.toml を開く", true, None::<&str>)?;
-            let m_set = MenuItem::with_id(app, "settings", "設定…", true, None::<&str>)?;
-            let m_pause = tauri::menu::CheckMenuItem::with_id(app, "pause", "記録を一時停止", true, false, None::<&str>)?;
-            let m_quit = MenuItem::with_id(app, "quit", "終了", true, None::<&str>)?;
-            let m_upd = MenuItem::with_id(app, "update", "更新を確認…", true, None::<&str>)?;
-            let menu = Menu::with_items(app, &[&m_show, &m_pause, &m_snip, &m_set, &m_upd, &m_quit])?;
-            let pause_item = m_pause.clone();
+            let menu = build_menu(app.handle())?;
             let mut tray = TrayIconBuilder::with_id("main")
                 .menu(&menu)
                 .show_menu_on_left_click(false)
@@ -906,17 +958,14 @@ pub fn run() {
             if let Some(icon) = app.default_window_icon() {
                 tray = tray.icon(icon.clone());
             }
-            tray.on_menu_event(move |app, ev| match ev.id.as_ref() {
+            tray.on_menu_event(|app, ev| match ev.id.as_ref() {
                 "show" => show_main(app),
                 "pause" => {
-                    // CheckMenuItem は押すと自動で反転する。その状態をそのまま採用する
-                    let on = pause_item.is_checked().unwrap_or(false);
-                    app.state::<AppState>().paused.store(on, Ordering::SeqCst);
-                    if let Some(t) = app.tray_by_id("main") {
-                        let _ = t.set_tooltip(Some(if on { "clp（記録を一時停止中）" } else { "clp" }));
-                    }
-                }
-                "snip" => open_snippets(app.clone()),
+                    let st = app.state::<AppState>();
+                    let on = !st.paused.load(Ordering::SeqCst);
+                    st.paused.store(on, Ordering::SeqCst);
+                    refresh_tray(app);
+                }                "snip" => open_snippets(app.clone()),
                 "settings" | "update" => open_settings(app),
                 "quit" => app.exit(0),
                 _ => {}
@@ -971,6 +1020,9 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             search,
+            get_dict,
+            list_langs,
+            set_language,
             get_excludes,
             set_excludes,
             recent_apps,
