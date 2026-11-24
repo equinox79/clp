@@ -145,6 +145,13 @@ table { border-collapse:collapse; width:100%; } td { padding:5px 0; border-botto
 
 <section id="p-about">
   <h1>情報</h1>
+  <div class="card"><h3>アップデート</h3>
+    <p>現在のバージョン: <b id="ver"></b>　（GitHub Releases の最新版を確認します）</p>
+    <div class="row"><button class="btn" id="chk">更新を確認</button><button class="btn pri" id="upd" style="display:none">今すぐ更新</button></div>
+    <div class="msg" id="updmsg"></div>
+    <pre id="notes" style="display:none;margin:8px 0 0;max-height:120px;overflow:auto;font:12px/1.5 inherit;white-space:pre-wrap;color:var(--sub);user-select:text"></pre>
+    <div class="row" style="margin:12px 0 0"><span class="grow">起動時に自動で確認する</span><label class="sw"><input type="checkbox" id="autochk"><span></span></label></div>
+  </div>
   <div class="card"><h3>設定のバックアップ</h3>
     <p>ホットキー・テーマ・表示位置・履歴の上限・定型文を1つのファイル（JSON）に保存／復元します。履歴の中身は含まれません。</p>
     <div class="row"><button class="btn" id="exp">エクスポート…</button><button class="btn" id="imp">インポート…</button></div>
@@ -253,6 +260,30 @@ $('clear').addEventListener('click', async () => {
 });
 $('opendir').addEventListener('click', () => invoke('open_dir'));
 
+/* ---------- update ---------- */
+function showUpdate(u) {
+  const aboutBtn = document.querySelector('nav button[data-p=about]');
+  if (u) {
+    say($('updmsg'), `新しい版 v${u.version} があります`);
+    $('upd').style.display = ''; $('upd').textContent = `v${u.version} に更新`;
+    if (u.notes) { $('notes').textContent = u.notes; $('notes').style.display = ''; }
+    aboutBtn.textContent = 'ℹ 情報 ●';
+  } else {
+    say($('updmsg'), '最新の版です'); $('upd').style.display = 'none'; $('notes').style.display = 'none';
+    aboutBtn.textContent = 'ℹ 情報';
+  }
+}
+$('chk').addEventListener('click', async () => {
+  say($('updmsg'), '確認中…'); $('chk').disabled = true;
+  try { showUpdate(await invoke('check_update')); } catch (err) { say($('updmsg'), String(err), true); }
+  $('chk').disabled = false;
+});
+$('upd').addEventListener('click', async () => {
+  $('upd').disabled = true; say($('updmsg'), 'ダウンロードして更新中…（完了すると自動で再起動します）');
+  try { await invoke('install_update'); } catch (err) { say($('updmsg'), String(err), true); $('upd').disabled = false; }
+});
+$('autochk').addEventListener('change', () => invoke('set_check_updates', { enabled: $('autochk').checked }));
+
 /* ---------- backup ---------- */
 $('exp').addEventListener('click', async () => {
   try { const p = await invoke('export_settings'); if (p) say($('bkmsg'), '保存しました: ' + p); }
@@ -360,6 +391,8 @@ invoke('get_settings').then((s) => {
   curTheme = s.theme; applyTheme(curTheme); drawThemes();
   const r = document.querySelector(`input[name=pos][value=${s.position}]`); if (r) { r.checked = true; r.closest('label').classList.add('on'); }
   $('maxitems').value = s.max_items; $('maxkb').value = s.max_kb; $('count').textContent = s.count; $('dir').textContent = s.data_dir;
+  $('ver').textContent = 'v' + s.version; $('autochk').checked = s.check_updates;
+  if (s.update_available) showUpdate({ version: s.update_available, notes: '' });
 });
 </script>
 </body>

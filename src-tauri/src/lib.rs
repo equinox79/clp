@@ -10,7 +10,7 @@ mod store;
 use serde::{Deserialize, Serialize};
 use snippets::{expand, Snippets};
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 use std::sync::Mutex;
 use std::time::Duration;
 use store::{fnv, Row, Store};
@@ -26,6 +26,8 @@ struct AppState {
     position: Mutex<String>,
     max_items: AtomicUsize,
     max_kb: AtomicUsize,
+    check_updates: AtomicBool,
+    update_available: Mutex<Option<String>>,
     store: Mutex<Store>,
     snips: Mutex<Snippets>,
     prev: Mutex<isize>,
@@ -40,6 +42,7 @@ struct Config {
     theme: String,
     position: String,
     max_kb: usize,
+    check_updates: bool,
 }
 
 impl Default for Config {
@@ -50,6 +53,7 @@ impl Default for Config {
             theme: "auto".into(),
             position: "center".into(),
             max_kb: 1024,
+            check_updates: true,
         }
     }
 }
@@ -215,12 +219,15 @@ struct Settings {
     max_kb: usize,
     count: usize,
     data_dir: String,
+    version: String,
+    check_updates: bool,
+    update_available: Option<String>,
 }
 
 fn write_config(dir: &PathBuf, c: &Config) {
     let body = format!(
-        "# 設定画面から変更できます\nhotkey = \"{}\"\ntheme = \"{}\"\n# 表示位置: center / mouse / caret\nposition = \"{}\"\n# 履歴の最大保持数（ピン留めは対象外）\nmax_items = {}\n# 1件あたりの最大サイズ(KB)。超えるテキストは保存しません\nmax_kb = {}\n",
-        c.hotkey, c.theme, c.position, c.max_items, c.max_kb
+        "# 設定画面から変更できます\nhotkey = \"{}\"\ntheme = \"{}\"\n# 表示位置: center / mouse / caret\nposition = \"{}\"\n# 履歴の最大保持数（ピン留めは対象外）\nmax_items = {}\n# 1件あたりの最大サイズ(KB)。超えるテキストは保存しません\nmax_kb = {}\n# 起動時に新しい版を確認する\ncheck_updates = {}\n",
+        c.hotkey, c.theme, c.position, c.max_items, c.max_kb, c.check_updates
     );
     let _ = std::fs::write(dir.join("config.toml"), body);
 }
@@ -234,8 +241,74 @@ fn save_config(st: &AppState) {
             theme: st.theme.lock().unwrap().clone(),
             position: st.position.lock().unwrap().clone(),
             max_kb: st.max_kb.load(Ordering::SeqCst),
+            check_updates: st.check_updates.load(Ordering::SeqCst),
         },
     );
+}
+
+#[tauri::command]
+fn set_check_updates(app: AppHandle, enabled: bool) {
+    let st = app.state::<AppState>();
+    st.check_updates.store(enabled, Ordering::SeqCst);
+    save_config(&st);
+}
+
+#[derive(Serialize)]
+struct UpdateInfo {
+    version: String,
+    notes: String,
+}
+
+fn set_tray_tip(app: &AppHandle, ver: Option<&str>) {
+    if let Some(t) = app.tray_by_id("main") {
+        let tip = match ver {
+            Some(v) => format!("clp — 新しい版 v{v} があります"),
+            None => "clp".to_string(),
+        };
+        let _ = t.set_tooltip(Some(tip));
+    }
+}
+
+/// GitHub Releases の latest.json を見て、新しい版があれば情報を返す
+#[tauri::command]
+async fn check_update(app: AppHandle) -> Result<Option<UpdateInfo>, String> {
+    use tauri_plugin_updater::UpdaterExt;
+    let found = app
+        .updater()
+        .map_err(|e| e.to_string())?
+        .check()
+        .await
+        .map_err(|e| format!("更新の確認に失敗しました: {e}"))?;
+    let st = app.state::<AppState>();
+    match found {
+        Some(u) => {
+            *st.update_available.lock().unwrap() = Some(u.version.clone());
+            set_tray_tip(&app, Some(&u.version));
+            Ok(Some(UpdateInfo { version: u.version.clone(), notes: u.body.clone().unwrap_or_default() }))
+        }
+        None => {
+            *st.update_available.lock().unwrap() = None;
+            set_tray_tip(&app, None);
+            Ok(None)
+        }
+    }
+}
+
+/// ダウンロードして署名を検証し、インストールして再起動する
+#[tauri::command]
+async fn install_update(app: AppHandle) -> Result<(), String> {
+    use tauri_plugin_updater::UpdaterExt;
+    let upd = app
+        .updater()
+        .map_err(|e| e.to_string())?
+        .check()
+        .await
+        .map_err(|e| format!("更新の確認に失敗しました: {e}"))?
+        .ok_or("更新はありません")?;
+    upd.download_and_install(|_, _| {}, || {})
+        .await
+        .map_err(|e| format!("更新のインストールに失敗しました: {e}"))?;
+    app.restart()
 }
 
 #[tauri::command]
@@ -298,6 +371,9 @@ fn get_settings(app: AppHandle) -> Settings {
         max_kb: app.state::<AppState>().max_kb.load(Ordering::SeqCst),
         count: app.state::<AppState>().store.lock().unwrap().count(),
         data_dir: app.state::<AppState>().dir.display().to_string(),
+        version: app.package_info().version.to_string(),
+        check_updates: app.state::<AppState>().check_updates.load(Ordering::SeqCst),
+        update_available: app.state::<AppState>().update_available.lock().unwrap().clone(),
     }
 }
 
@@ -490,6 +566,7 @@ fn data_dir(app: &tauri::App) -> PathBuf {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
                 .with_handler(|app, _sc, ev| {
@@ -518,6 +595,8 @@ pub fn run() {
                 position: Mutex::new(cfg.position.clone()),
                 max_items: AtomicUsize::new(cfg.max_items),
                 max_kb: AtomicUsize::new(cfg.max_kb),
+                check_updates: AtomicBool::new(cfg.check_updates),
+                update_available: Mutex::new(None),
                 store: Mutex::new(store),
                 snips: Mutex::new(Snippets::new(dir.join("snippets.toml"))),
                 prev: Mutex::new(0),
@@ -532,8 +611,9 @@ pub fn run() {
             let m_snip = MenuItem::with_id(app, "snip", "snippets.toml を開く", true, None::<&str>)?;
             let m_set = MenuItem::with_id(app, "settings", "設定…", true, None::<&str>)?;
             let m_quit = MenuItem::with_id(app, "quit", "終了", true, None::<&str>)?;
-            let menu = Menu::with_items(app, &[&m_show, &m_snip, &m_set, &m_quit])?;
-            let mut tray = TrayIconBuilder::new()
+            let m_upd = MenuItem::with_id(app, "update", "更新を確認…", true, None::<&str>)?;
+            let menu = Menu::with_items(app, &[&m_show, &m_snip, &m_set, &m_upd, &m_quit])?;
+            let mut tray = TrayIconBuilder::with_id("main")
                 .menu(&menu)
                 .show_menu_on_left_click(false)
                 .tooltip("clp");
@@ -543,7 +623,7 @@ pub fn run() {
             tray.on_menu_event(|app, ev| match ev.id.as_ref() {
                 "show" => show_main(app),
                 "snip" => open_snippets(app.clone()),
-                "settings" => open_settings(app),
+                "settings" | "update" => open_settings(app),
                 "quit" => app.exit(0),
                 _ => {}
             })
@@ -566,6 +646,15 @@ pub fn run() {
                 platform::setup_window(&w);
             }
             platform::ensure_permissions();
+
+            // 起動の少し後に、新しい版がないか裏で確認する（設定でオフにできる）
+            if cfg.check_updates {
+                let h = app.handle().clone();
+                std::thread::spawn(move || {
+                    std::thread::sleep(Duration::from_secs(8));
+                    let _ = tauri::async_runtime::block_on(check_update(h));
+                });
+            }
 
             start_monitor(app.handle().clone());
             Ok(())
@@ -595,6 +684,9 @@ pub fn run() {
             set_position,
             export_settings,
             import_settings,
+            set_check_updates,
+            check_update,
+            install_update,
             set_limits,
             clear_history,
             open_dir,

@@ -7,11 +7,11 @@ on:
   pull_request:
   workflow_dispatch:
 
-permissions:
-  contents: read
-
 jobs:
   build:
+    # v* タグのときは GitHub Releases に成果物と latest.json（アプリ内アップデート用）を載せる
+    permissions:
+      contents: write
     strategy:
       fail-fast: false
       matrix:
@@ -39,8 +39,27 @@ jobs:
 
       - run: npm ci
 
-      - name: Build
-        run: npx tauri build --bundles ${{ matrix.bundles }}
+      - name: Build (and release on tag)
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || '' }}
+          releaseName: clp ${{ github.ref_name }}
+          releaseBody: "更新内容は下の変更履歴を参照してください。インストール・更新の方法は README を参照。"
+          releaseDraft: false
+          prerelease: false
+          includeUpdaterJson: true
+          args: --bundles ${{ matrix.bundles }}
+
+      - name: Attach portable clp.exe to release
+        if: matrix.name == 'windows' && startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${{ github.ref_name }}" src-tauri/target/release/clp.exe --clobber
 
       - name: Upload (Windows)
         if: matrix.name == 'windows'
@@ -57,20 +76,3 @@ jobs:
         with:
           name: clp-macos-arm64
           path: src-tauri/target/release/bundle/dmg/*.dmg
-
-  release:
-    # v* タグを push したときだけ、成果物を GitHub Releases に載せる
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: build
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          path: dist
-          merge-multiple: true
-      - uses: softprops/action-gh-release@v2
-        with:
-          files: dist/*
-          generate_release_notes: true
