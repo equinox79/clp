@@ -129,6 +129,12 @@ table { border-collapse:collapse; width:100%; } td { padding:5px 0; border-botto
   <div class="card"><h3>文字サイズ</h3><p>履歴の窓の文字の大きさです。</p>
     <select id="fontsize"><option value="12">小</option><option value="14">標準</option><option value="16">大</option><option value="18">特大</option></select>
   </div>
+  <div class="card">
+    <div class="row"><div class="grow"><h3>窓の影</h3><p style="margin:0">履歴の窓に影を付けて、背後のウィンドウと区別しやすくします。</p></div>
+      <label class="sw"><input type="checkbox" id="fxshadow"><span></span></label></div>
+    <div class="row" style="margin-top:12px"><div class="grow"><h3>すりガラス</h3><p style="margin:0">窓の背景を半透明にし、背後をぼかして透かします。</p></div>
+      <label class="sw"><input type="checkbox" id="fxglass"><span></span></label></div>
+  </div>
 </section>
 
 <section id="p-keys">
@@ -248,6 +254,9 @@ const UI = { closeOnBlur: true, fontSize: 14 };
 const saveUI = () => invoke('set_ui', { closeOnBlur: UI.closeOnBlur, fontSize: UI.fontSize });
 $('blur').addEventListener('change', () => { UI.closeOnBlur = $('blur').checked; saveUI(); });
 $('fontsize').addEventListener('change', () => { UI.fontSize = Number($('fontsize').value); saveUI(); });
+const saveFx = () => invoke('set_effects', { shadow: $('fxshadow').checked, glass: $('fxglass').checked });
+$('fxshadow').addEventListener('change', saveFx);
+$('fxglass').addEventListener('change', saveFx);
 
 /* ---------- keys ---------- */
 let K = null, capturing = null;
@@ -465,6 +474,7 @@ invoke('get_settings').then((s) => {
   $('hkreset').textContent = `既定に戻す (${fmtHotkey('Ctrl+Alt+V')})`;
   UI.closeOnBlur = s.close_on_blur; UI.fontSize = s.font_size;
   $('blur').checked = UI.closeOnBlur; $('fontsize').value = String(UI.fontSize);
+  $('fxshadow').checked = s.shadow; $('fxglass').checked = s.glass;
   invoke('get_keys').then((k) => { K = { ...DEFAULT_KEYS, ...k }; drawKeys(); });
   curTheme = s.theme; applyTheme(curTheme); drawThemes();
   const r = document.querySelector(`input[name=pos][value=${s.position}]`); if (r) { r.checked = true; r.closest('label').classList.add('on'); }

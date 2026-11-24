@@ -54,6 +54,7 @@ pub fn open_text(p: &Path) {
 
 /// macOS 用のウィンドウ設定フック（Windows では何もしない）
 pub fn setup_window(_w: &tauri::WebviewWindow) {}
+pub fn refresh_shadow(_w: &tauri::WebviewWindow) {}
 pub fn activate_self() {}
 pub fn ensure_permissions() {}
 

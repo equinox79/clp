@@ -29,3 +29,11 @@ mark { background: var(--mark); color: inherit; border-radius: 2px; }
   white-space: pre-wrap; word-break: break-all; font: 12px/1.4 "Cascadia Mono", Consolas, "Yu Gothic UI", monospace; color: var(--sub); }
 #hint { padding: 4px 14px; font-size: 11px; color: var(--sub); border-top: 1px solid var(--line); }
 .empty { padding: 24px; text-align: center; color: var(--sub); }
+
+/* すりガラス: 窓の背後は OS がぼかす（macOS: vibrancy / Windows: Acrylic）。背景色を半透明にして透かす */
+html.glass #app { background: var(--bg); background: color-mix(in srgb, var(--bg) 55%, transparent);
+  border-color: color-mix(in srgb, var(--line) 70%, transparent); }
+html.glass #head, html.glass #preview, html.glass #hint { border-color: color-mix(in srgb, var(--line) 70%, transparent); }
+html.glass .row.sel { background: color-mix(in srgb, var(--sel) 80%, transparent); }
+/* Windows 11 は影を付けると OS が角を 8px で丸め、1px の枠も付ける */
+html.win.shadow #app { border-radius: 8px; border-color: transparent; }

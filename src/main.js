@@ -140,9 +140,16 @@ const ACT = {
 invoke('get_keys').then(applyKeys);
 listen('keys', (e) => applyKeys(e.payload));
 const setFont = (px) => document.documentElement.style.setProperty('--fs', px + 'px');
-invoke('get_settings').then((s) => { applyTheme(s.theme); setFont(s.font_size); });
+invoke('get_settings').then((s) => { applyTheme(s.theme); setFont(s.font_size); setEffects(s); });
 listen('theme', (e) => applyTheme(e.payload));
 listen('ui', (e) => setFont(e.payload));
+const setEffects = (fx) => {
+  const c = document.documentElement.classList;
+  c.toggle('win', !IS_MAC);
+  c.toggle('shadow', !!fx.shadow);
+  c.toggle('glass', !!fx.glass);
+};
+listen('effects', (e) => setEffects(e.payload));
 
 listen('shown', (e) => {
   cache = e.payload;

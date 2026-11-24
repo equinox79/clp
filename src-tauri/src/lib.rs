@@ -29,6 +29,8 @@ struct AppState {
     check_updates: AtomicBool,
     close_on_blur: AtomicBool,
     font_size: AtomicUsize,
+    shadow: AtomicBool,
+    glass: AtomicBool,
     keys: Mutex<Keys>,
     update_available: Mutex<Option<String>>,
     store: Mutex<Store>,
@@ -87,6 +89,10 @@ struct Config {
     check_updates: bool,
     close_on_blur: bool,
     font_size: usize,
+    /// 窓の影
+    shadow: bool,
+    /// 窓の背景をすりガラス風にする（macOS: vibrancy / Windows: Acrylic）
+    glass: bool,
     keys: Keys,
 }
 
@@ -101,6 +107,8 @@ impl Default for Config {
             check_updates: true,
             close_on_blur: true,
             font_size: 14,
+            shadow: default_shadow(),
+            glass: false,
             keys: Keys::default(),
         }
     }
@@ -136,6 +144,44 @@ fn set_clipboard(text: &str) -> bool {
         std::thread::sleep(Duration::from_millis(25));
     }
     false
+}
+
+/// 暗い配色のテーマか（src/themes.js と合わせる）。"auto" は OS に従うので None
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+fn theme_is_dark(theme: &str) -> Option<bool> {
+    match theme {
+        "auto" => None,
+        "dark" | "nord" | "dracula" => Some(true),
+        _ => Some(false),
+    }
+}
+
+/// 窓の外観（ライト/ダーク）をテーマに合わせる。すりガラスの素材の明暗がこれに従う（macOS）
+fn apply_window_theme(w: &tauri::WebviewWindow, theme: &str) {
+    #[cfg(target_os = "macos")]
+    {
+        let t = theme_is_dark(theme).map(|d| if d { tauri::Theme::Dark } else { tauri::Theme::Light });
+        let _ = w.set_theme(t);
+    }
+    #[cfg(not(target_os = "macos"))]
+    let _ = (w, theme);
+}
+
+/// 窓の影・すりガラス効果を反映する
+fn apply_effects(w: &tauri::WebviewWindow, shadow: bool, glass: bool) {
+    use tauri::window::{Effect, EffectsBuilder};
+    let _ = w.set_shadow(shadow);
+    if glass {
+        // macOS: メニューと同じ素材。角丸は CSS の #app (12px) に合わせる
+        #[cfg(target_os = "macos")]
+        let fx = EffectsBuilder::new().effect(Effect::Menu).state(tauri::window::EffectState::Active).radius(12.0);
+        #[cfg(not(target_os = "macos"))]
+        let fx = EffectsBuilder::new().effect(Effect::Acrylic);
+        let _ = w.set_effects(fx.build());
+    } else {
+        let _ = w.set_effects(None);
+    }
+    platform::refresh_shadow(w);
 }
 
 fn hide_main(app: &AppHandle) {
@@ -188,6 +234,7 @@ fn show_main(app: &AppHandle) {
     let _ = app.emit("shown", payload);
     place_window(app, &w);
     let _ = w.show();
+    platform::refresh_shadow(&w);
     platform::activate_self();
     let _ = w.set_focus();
 }
@@ -271,6 +318,8 @@ struct Settings {
     check_updates: bool,
     close_on_blur: bool,
     font_size: usize,
+    shadow: bool,
+    glass: bool,
     update_available: Option<String>,
 }
 
@@ -295,6 +344,8 @@ fn save_config(st: &AppState) {
             check_updates: st.check_updates.load(Ordering::SeqCst),
             close_on_blur: st.close_on_blur.load(Ordering::SeqCst),
             font_size: st.font_size.load(Ordering::SeqCst),
+            shadow: st.shadow.load(Ordering::SeqCst),
+            glass: st.glass.load(Ordering::SeqCst),
             keys: st.keys.lock().unwrap().clone(),
         },
     );
@@ -331,6 +382,24 @@ fn set_ui(app: AppHandle, close_on_blur: bool, font_size: usize) {
     st.font_size.store(fs, Ordering::SeqCst);
     save_config(&st);
     let _ = app.emit("ui", fs);
+}
+
+#[derive(Serialize, Clone)]
+struct Effects {
+    shadow: bool,
+    glass: bool,
+}
+
+#[tauri::command]
+fn set_effects(app: AppHandle, shadow: bool, glass: bool) {
+    let st = app.state::<AppState>();
+    st.shadow.store(shadow, Ordering::SeqCst);
+    st.glass.store(glass, Ordering::SeqCst);
+    save_config(&st);
+    if let Some(w) = app.get_webview_window("main") {
+        apply_effects(&w, shadow, glass);
+    }
+    let _ = app.emit("effects", Effects { shadow, glass });
 }
 
 #[tauri::command]
@@ -444,6 +513,9 @@ fn set_theme(app: AppHandle, theme: String) {
     let st = app.state::<AppState>();
     *st.theme.lock().unwrap() = theme.clone();
     save_config(&st);
+    if let Some(w) = app.get_webview_window("main") {
+        apply_window_theme(&w, &theme);
+    }
     let _ = app.emit("theme", theme);
 }
 
@@ -462,6 +534,8 @@ fn get_settings(app: AppHandle) -> Settings {
         check_updates: app.state::<AppState>().check_updates.load(Ordering::SeqCst),
         close_on_blur: app.state::<AppState>().close_on_blur.load(Ordering::SeqCst),
         font_size: app.state::<AppState>().font_size.load(Ordering::SeqCst),
+        shadow: app.state::<AppState>().shadow.load(Ordering::SeqCst),
+        glass: app.state::<AppState>().glass.load(Ordering::SeqCst),
         update_available: app.state::<AppState>().update_available.lock().unwrap().clone(),
     }
 }
@@ -498,6 +572,10 @@ struct BundleCfg {
     close_on_blur: bool,
     #[serde(default = "default_font")]
     font_size: usize,
+    #[serde(default = "default_shadow")]
+    shadow: bool,
+    #[serde(default)]
+    glass: bool,
 }
 
 fn default_true() -> bool {
@@ -505,6 +583,10 @@ fn default_true() -> bool {
 }
 fn default_font() -> usize {
     14
+}
+/// 影は macOS では既定でオン。Windows は枠なし窓に影を付けると DWM の 1px 枠が付くため既定はオフ
+fn default_shadow() -> bool {
+    cfg!(target_os = "macos")
 }
 
 #[derive(Serialize, Deserialize)]
@@ -537,6 +619,8 @@ async fn export_settings(app: AppHandle) -> Result<String, String> {
             keys: st.keys.lock().unwrap().clone(),
             close_on_blur: st.close_on_blur.load(Ordering::SeqCst),
             font_size: st.font_size.load(Ordering::SeqCst),
+            shadow: st.shadow.load(Ordering::SeqCst),
+            glass: st.glass.load(Ordering::SeqCst),
         },
         snippets,
     };
@@ -586,6 +670,7 @@ async fn import_settings(app: AppHandle) -> Result<String, String> {
     }
     set_limits(app.clone(), c.max_items, c.max_kb);
     set_ui(app.clone(), c.close_on_blur, c.font_size);
+    set_effects(app.clone(), c.shadow, c.glass);
     if let Err(e) = set_keys(app.clone(), c.keys) {
         return Err(format!("キー設定が不正です: {e}"));
     }
@@ -708,6 +793,8 @@ pub fn run() {
                 check_updates: AtomicBool::new(cfg.check_updates),
                 close_on_blur: AtomicBool::new(cfg.close_on_blur),
                 font_size: AtomicUsize::new(cfg.font_size),
+                shadow: AtomicBool::new(cfg.shadow),
+                glass: AtomicBool::new(cfg.glass),
                 keys: Mutex::new(cfg.keys.clone()),
                 update_available: Mutex::new(None),
                 store: Mutex::new(store),
@@ -757,6 +844,8 @@ pub fn run() {
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
             if let Some(w) = app.get_webview_window("main") {
                 platform::setup_window(&w);
+                apply_window_theme(&w, &cfg.theme);
+                apply_effects(&w, cfg.shadow, cfg.glass);
             }
             platform::ensure_permissions();
 
@@ -804,6 +893,7 @@ pub fn run() {
             get_keys,
             set_keys,
             set_ui,
+            set_effects,
             check_update,
             install_update,
             set_limits,

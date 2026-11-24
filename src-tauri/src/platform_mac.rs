@@ -84,6 +84,16 @@ pub fn setup_window(w: &tauri::WebviewWindow) {
     }
 }
 
+/// 透明な窓の影は内容の形から作られるため、表示や効果の切り替え後に作り直す
+pub fn refresh_shadow(w: &tauri::WebviewWindow) {
+    if let Ok(ptr) = w.ns_window() {
+        let win = ptr as *mut AnyObject;
+        unsafe {
+            let _: () = msg_send![win, invalidateShadow];
+        }
+    }
+}
+
 /// 自アプリを前面化（Accessory ポリシーのアプリは明示しないとフォーカスを取れない）
 pub fn activate_self() {
     autoreleasepool(|_| unsafe {
