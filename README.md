@@ -135,6 +135,10 @@ npx tauri build                 # src-tauri/target/release/bundle/ に .app と 
 - 配布する場合は Apple Developer への登録（年 $99）、署名、公証が必要です。自分用なら不要で、初回は右クリック →「開く」で起動します。
 - 透過ウィンドウのために macOS のプライベート API（`macOSPrivateApi`）を使っているため、Mac App Store には出せません。
 
+## ライセンス
+
+[MIT License](LICENSE)
+
 ## 注意事項
 
 - コード署名をしていないため、他の PC へブラウザ等で配布すると SmartScreen の警告が出ます。「詳細情報」→「実行」で起動するか、ファイルのプロパティで「ブロックの解除」をしてください。
