@@ -27,6 +27,9 @@ struct AppState {
     max_items: AtomicUsize,
     max_kb: AtomicUsize,
     check_updates: AtomicBool,
+    close_on_blur: AtomicBool,
+    font_size: AtomicUsize,
+    keys: Mutex<Keys>,
     update_available: Mutex<Option<String>>,
     store: Mutex<Store>,
     snips: Mutex<Snippets>,
@@ -34,7 +37,46 @@ struct AppState {
     self_hash: AtomicU64,
 }
 
-#[derive(Deserialize)]
+/// 窓内のキーバインド。各要素は "Ctrl+J" "ArrowDown" "Escape" のような保存形式
+#[derive(Serialize, Deserialize, Clone)]
+#[serde(default)]
+struct Keys {
+    next: Vec<String>,
+    prev: Vec<String>,
+    choose: Vec<String>,
+    switch_tab: Vec<String>,
+    pin: Vec<String>,
+    delete: Vec<String>,
+    edit_snippets: Vec<String>,
+    close: Vec<String>,
+    /// 「上から1〜10番目を即貼り付け」の修飾キー（Ctrl / Alt / Shift / Super）
+    quick_mod: String,
+    /// 定型文タブで検索欄が空のとき、数字キー単体で即貼り付けする
+    bare_digits: bool,
+}
+
+fn v(a: &[&str]) -> Vec<String> {
+    a.iter().map(|s| s.to_string()).collect()
+}
+
+impl Default for Keys {
+    fn default() -> Self {
+        Keys {
+            next: v(&["ArrowDown", "Ctrl+J"]),
+            prev: v(&["ArrowUp", "Ctrl+K"]),
+            choose: v(&["Enter"]),
+            switch_tab: v(&["Tab"]),
+            pin: v(&["Ctrl+P"]),
+            delete: v(&["Ctrl+D", "Delete"]),
+            edit_snippets: v(&["Ctrl+E"]),
+            close: v(&["Escape"]),
+            quick_mod: "Alt".into(),
+            bare_digits: true,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
 #[serde(default)]
 struct Config {
     hotkey: String,
@@ -43,6 +85,9 @@ struct Config {
     position: String,
     max_kb: usize,
     check_updates: bool,
+    close_on_blur: bool,
+    font_size: usize,
+    keys: Keys,
 }
 
 impl Default for Config {
@@ -54,6 +99,9 @@ impl Default for Config {
             position: "center".into(),
             max_kb: 1024,
             check_updates: true,
+            close_on_blur: true,
+            font_size: 14,
+            keys: Keys::default(),
         }
     }
 }
@@ -221,15 +269,18 @@ struct Settings {
     data_dir: String,
     version: String,
     check_updates: bool,
+    close_on_blur: bool,
+    font_size: usize,
     update_available: Option<String>,
 }
 
+/// config.toml を書き出す（設定画面から変更するたびに全体を書き直す。コメントは残らない）
 fn write_config(dir: &PathBuf, c: &Config) {
-    let body = format!(
-        "# 設定画面から変更できます\nhotkey = \"{}\"\ntheme = \"{}\"\n# 表示位置: center / mouse / caret\nposition = \"{}\"\n# 履歴の最大保持数（ピン留めは対象外）\nmax_items = {}\n# 1件あたりの最大サイズ(KB)。超えるテキストは保存しません\nmax_kb = {}\n# 起動時に新しい版を確認する\ncheck_updates = {}\n",
-        c.hotkey, c.theme, c.position, c.max_items, c.max_kb, c.check_updates
+    let body = toml::to_string_pretty(c).unwrap_or_default();
+    let _ = std::fs::write(
+        dir.join("config.toml"),
+        format!("# clp の設定。設定画面から変更できます（直接編集した場合は再起動してください）\n{body}"),
     );
-    let _ = std::fs::write(dir.join("config.toml"), body);
 }
 
 fn save_config(st: &AppState) {
@@ -242,8 +293,44 @@ fn save_config(st: &AppState) {
             position: st.position.lock().unwrap().clone(),
             max_kb: st.max_kb.load(Ordering::SeqCst),
             check_updates: st.check_updates.load(Ordering::SeqCst),
+            close_on_blur: st.close_on_blur.load(Ordering::SeqCst),
+            font_size: st.font_size.load(Ordering::SeqCst),
+            keys: st.keys.lock().unwrap().clone(),
         },
     );
+}
+
+#[tauri::command]
+fn get_keys(app: AppHandle) -> Keys {
+    app.state::<AppState>().keys.lock().unwrap().clone()
+}
+
+#[tauri::command]
+fn set_keys(app: AppHandle, keys: Keys) -> Result<(), String> {
+    if keys.choose.is_empty() {
+        return Err("「貼り付けて閉じる」には、1つ以上のキーが必要です".into());
+    }
+    if keys.close.is_empty() {
+        return Err("「閉じる」には、1つ以上のキーが必要です".into());
+    }
+    if !matches!(keys.quick_mod.as_str(), "Ctrl" | "Alt" | "Shift" | "Super") {
+        return Err("即貼り付けの修飾キーが不正です".into());
+    }
+    let st = app.state::<AppState>();
+    *st.keys.lock().unwrap() = keys.clone();
+    save_config(&st);
+    let _ = app.emit("keys", keys);
+    Ok(())
+}
+
+#[tauri::command]
+fn set_ui(app: AppHandle, close_on_blur: bool, font_size: usize) {
+    let st = app.state::<AppState>();
+    let fs = font_size.clamp(11, 24);
+    st.close_on_blur.store(close_on_blur, Ordering::SeqCst);
+    st.font_size.store(fs, Ordering::SeqCst);
+    save_config(&st);
+    let _ = app.emit("ui", fs);
 }
 
 #[tauri::command]
@@ -373,6 +460,8 @@ fn get_settings(app: AppHandle) -> Settings {
         data_dir: app.state::<AppState>().dir.display().to_string(),
         version: app.package_info().version.to_string(),
         check_updates: app.state::<AppState>().check_updates.load(Ordering::SeqCst),
+        close_on_blur: app.state::<AppState>().close_on_blur.load(Ordering::SeqCst),
+        font_size: app.state::<AppState>().font_size.load(Ordering::SeqCst),
         update_available: app.state::<AppState>().update_available.lock().unwrap().clone(),
     }
 }
@@ -402,6 +491,20 @@ struct BundleCfg {
     position: String,
     max_items: usize,
     max_kb: usize,
+    // 以下は後から追加した項目（古いファイルには無いので、無ければ既定値）
+    #[serde(default)]
+    keys: Keys,
+    #[serde(default = "default_true")]
+    close_on_blur: bool,
+    #[serde(default = "default_font")]
+    font_size: usize,
+}
+
+fn default_true() -> bool {
+    true
+}
+fn default_font() -> usize {
+    14
 }
 
 #[derive(Serialize, Deserialize)]
@@ -431,6 +534,9 @@ async fn export_settings(app: AppHandle) -> Result<String, String> {
             position: st.position.lock().unwrap().clone(),
             max_items: st.max_items.load(Ordering::SeqCst),
             max_kb: st.max_kb.load(Ordering::SeqCst),
+            keys: st.keys.lock().unwrap().clone(),
+            close_on_blur: st.close_on_blur.load(Ordering::SeqCst),
+            font_size: st.font_size.load(Ordering::SeqCst),
         },
         snippets,
     };
@@ -479,6 +585,10 @@ async fn import_settings(app: AppHandle) -> Result<String, String> {
         set_position(app.clone(), c.position);
     }
     set_limits(app.clone(), c.max_items, c.max_kb);
+    set_ui(app.clone(), c.close_on_blur, c.font_size);
+    if let Err(e) = set_keys(app.clone(), c.keys) {
+        return Err(format!("キー設定が不正です: {e}"));
+    }
     let mut msg = format!("読み込みました（定型文 {n} 件）");
     if let Err(e) = set_hotkey(app.clone(), c.hotkey.clone()) {
         msg += &format!("。ただしホットキー {} は設定できませんでした（{e}）", c.hotkey);
@@ -596,6 +706,9 @@ pub fn run() {
                 max_items: AtomicUsize::new(cfg.max_items),
                 max_kb: AtomicUsize::new(cfg.max_kb),
                 check_updates: AtomicBool::new(cfg.check_updates),
+                close_on_blur: AtomicBool::new(cfg.close_on_blur),
+                font_size: AtomicUsize::new(cfg.font_size),
+                keys: Mutex::new(cfg.keys.clone()),
                 update_available: Mutex::new(None),
                 store: Mutex::new(store),
                 snips: Mutex::new(Snippets::new(dir.join("snippets.toml"))),
@@ -662,7 +775,10 @@ pub fn run() {
         .on_window_event(|win, ev| match ev {
             _ if win.label() != "main" => {}
             WindowEvent::Focused(false) => {
-                let _ = win.hide();
+                let st = win.app_handle().state::<AppState>();
+                if st.close_on_blur.load(Ordering::SeqCst) {
+                    let _ = win.hide();
+                }
             }
             WindowEvent::CloseRequested { api, .. } => {
                 api.prevent_close();
@@ -685,6 +801,9 @@ pub fn run() {
             export_settings,
             import_settings,
             set_check_updates,
+            get_keys,
+            set_keys,
+            set_ui,
             check_update,
             install_update,
             set_limits,

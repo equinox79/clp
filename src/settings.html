@@ -71,6 +71,14 @@ button.btn:disabled { opacity:.4; cursor:default; }
 .bar { display:flex; gap:8px; align-items:center; }
 .empty { color:var(--sub); text-align:center; padding:40px 10px; }
 .banner { border:1px solid var(--err); color:var(--err); border-radius:10px; padding:10px 14px; margin-bottom:12px; font-size:12px; white-space:pre-wrap; }
+select { background:var(--bg); color:var(--fg); border:1px solid var(--line); border-radius:8px; padding:6px 10px; font:inherit; }
+.krow { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--line); }
+.krow:last-child { border-bottom:0; }
+.krow .lab { width:220px; flex:none; }
+.krow .chips { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+.kc { display:inline-flex; align-items:center; gap:4px; border:1px solid var(--line); border-radius:8px; padding:2px 4px 2px 8px; }
+.kc b { cursor:pointer; color:var(--sub); padding:0 4px; font-weight:400; } .kc b:hover { color:var(--err); }
+.krow .add { padding:2px 10px; } .krow .add.rec { border-color:var(--accent); outline:2px solid color-mix(in srgb, var(--accent) 40%, transparent); }
 kbd { border:1px solid var(--line); border-bottom-width:2px; border-radius:5px; padding:0 6px; font:12px Consolas,monospace; }
 table { border-collapse:collapse; width:100%; } td { padding:5px 0; border-bottom:1px solid var(--line); font-size:13px; } td:first-child { width:150px; }
 </style>
@@ -80,6 +88,7 @@ table { border-collapse:collapse; width:100%; } td { padding:5px 0; border-botto
   <div class="brand"><i></i>clp</div>
   <button data-p="general" class="on">⚙ 一般</button>
   <button data-p="look">🎨 外観</button>
+  <button data-p="keys">⌨ キー操作</button>
   <button data-p="snip">📝 定型文</button>
   <button data-p="hist">🗂 履歴</button>
   <button data-p="about">ℹ 情報</button>
@@ -108,11 +117,33 @@ table { border-collapse:collapse; width:100%; } td { padding:5px 0; border-botto
       <label class="sw"><input type="checkbox" id="auto"><span></span></label></div>
     <div class="msg" id="automsg"></div>
   </div>
+  <div class="card">
+    <div class="row"><div class="grow"><h3>フォーカスが外れたら閉じる</h3><p style="margin:0">オフにすると、Esc や貼り付けを行うまで窓が残ります。</p></div>
+      <label class="sw"><input type="checkbox" id="blur"><span></span></label></div>
+  </div>
 </section>
 
 <section id="p-look">
   <h1>外観</h1>
   <div class="card"><h3>テーマ</h3><p>選ぶとすぐ反映されます。</p><div id="themes"></div></div>
+  <div class="card"><h3>文字サイズ</h3><p>履歴の窓の文字の大きさです。</p>
+    <select id="fontsize"><option value="12">小</option><option value="14">標準</option><option value="16">大</option><option value="18">特大</option></select>
+  </div>
+</section>
+
+<section id="p-keys">
+  <h1>キー操作</h1>
+  <div class="card">
+    <h3>窓の中のキー</h3>
+    <p>「＋」を押してから、割り当てたいキーを押します。× で外します。1つの操作に複数のキーを割り当てられます。</p>
+    <div id="keyrows"></div>
+    <div class="row" style="margin:12px 0 0"><button class="btn" id="keyreset">すべて既定に戻す</button><span class="msg" id="keymsg"></span></div>
+  </div>
+  <div class="card">
+    <h3>即貼り付け</h3>
+    <div class="row"><span class="grow">上から1〜10番目を貼り付ける<br><small style="color:var(--sub)">修飾キー + 数字（<span id="qexample"></span> など）</small></span><select id="quickmod"></select></div>
+    <div class="row"><span class="grow">定型文タブで、検索欄が空のとき数字キー単体で貼り付ける</span><label class="sw"><input type="checkbox" id="bare"><span></span></label></div>
+  </div>
 </section>
 
 <section id="p-snip" class="wide">
@@ -158,9 +189,6 @@ table { border-collapse:collapse; width:100%; } td { padding:5px 0; border-botto
     <div class="msg" id="bkmsg"></div>
   </div>
   <div class="card"><h3>データの場所</h3><p id="dir" style="user-select:text"></p><button class="btn" id="opendir">フォルダを開く</button></div>
-  <div class="card"><h3>キー操作</h3>
-    <table id="keytable"></table>
-  </div>
 </section>
 
 </main>
@@ -214,6 +242,58 @@ $('auto').addEventListener('change', async () => {
   try { await invoke('set_autostart', { enabled: $('auto').checked }); say($('automsg'), '保存しました'); }
   catch (err) { say($('automsg'), String(err), true); $('auto').checked = !$('auto').checked; }
 });
+
+/* ---------- UI options ---------- */
+const UI = { closeOnBlur: true, fontSize: 14 };
+const saveUI = () => invoke('set_ui', { closeOnBlur: UI.closeOnBlur, fontSize: UI.fontSize });
+$('blur').addEventListener('change', () => { UI.closeOnBlur = $('blur').checked; saveUI(); });
+$('fontsize').addEventListener('change', () => { UI.fontSize = Number($('fontsize').value); saveUI(); });
+
+/* ---------- keys ---------- */
+let K = null, capturing = null;
+const keymsg = (t, err) => say($('keymsg'), t, err);
+const QM_NAME = IS_MAC
+  ? { Ctrl: '⌃ Control', Alt: '⌥ Option', Shift: '⇧ Shift', Super: '⌘ Command' }
+  : { Ctrl: 'Ctrl', Alt: 'Alt', Shift: 'Shift', Super: 'Win' };
+
+function saveKeys() {
+  return invoke('set_keys', { keys: K }).then(() => keymsg('保存しました'), (err) => keymsg(String(err), true));
+}
+function drawKeys() {
+  if (!K) return;
+  $('keyrows').innerHTML = KEY_ACTIONS.map(([act, label]) =>
+    `<div class="krow"><span class="lab">${label}</span><span class="chips">` +
+    (K[act] || []).map((c, i) => `<span class="kc"><kbd>${esc(fmtHotkey(c))}</kbd><b data-act="${act}" data-i="${i}" title="外す">×</b></span>`).join('') +
+    `<button class="btn add${capturing === act ? ' rec' : ''}" data-act="${act}">${capturing === act ? 'キーを押す…' : '＋'}</button></span></div>`
+  ).join('');
+  $('quickmod').innerHTML = ['Ctrl', 'Alt', 'Shift', 'Super'].map((m) => `<option value="${m}">${QM_NAME[m]}</option>`).join('');
+  $('quickmod').value = K.quick_mod; $('bare').checked = K.bare_digits;
+  $('qexample').textContent = combo([K.quick_mod], '1');
+}
+$('keyrows').addEventListener('click', (e) => {
+  const rm = e.target.closest('b[data-act]');
+  if (rm) {
+    const act = rm.dataset.act;
+    if ((act === 'choose' || act === 'close') && K[act].length <= 1) return keymsg('この操作には、1つ以上のキーが必要です', true);
+    K[act].splice(Number(rm.dataset.i), 1); capturing = null; drawKeys(); saveKeys(); return;
+  }
+  const add = e.target.closest('button.add');
+  if (add) { capturing = capturing === add.dataset.act ? null : add.dataset.act; keymsg(capturing ? 'キーを押してください（Esc でキャンセル）' : ''); drawKeys(); }
+});
+document.addEventListener('keydown', (e) => {
+  if (!capturing || e.isComposing || e.keyCode === 229) return;
+  e.preventDefault();
+  if (e.code === 'Escape' && capturing !== 'close') { capturing = null; keymsg(''); drawKeys(); return; }
+  const c = eventCombo(e);
+  if (!c) return; // 修飾キーだけ・未対応のキー
+  const bad = bindingProblem(c);
+  if (bad) return keymsg(bad, true);
+  for (const [a, label] of KEY_ACTIONS) if ((K[a] || []).includes(c)) return keymsg(`${fmtHotkey(c)} は「${label}」に割り当て済みです`, true);
+  K[capturing].push(c); capturing = null; drawKeys(); saveKeys();
+}, true);
+$('quickmod').addEventListener('change', () => { K.quick_mod = $('quickmod').value; drawKeys(); saveKeys(); });
+$('bare').addEventListener('change', () => { K.bare_digits = $('bare').checked; saveKeys(); });
+$('keyreset').addEventListener('click', () => { K = JSON.parse(JSON.stringify(DEFAULT_KEYS)); capturing = null; drawKeys(); saveKeys(); });
 
 /* ---------- look ---------- */
 let curTheme = 'auto';
@@ -383,14 +463,9 @@ invoke('get_settings').then((s) => {
   S = s;
   $('hk').value = fmtHotkey(s.hotkey); $('auto').checked = s.autostart;
   $('hkreset').textContent = `既定に戻す (${fmtHotkey('Ctrl+Alt+V')})`;
-  $('keytable').innerHTML = [
-    [['Enter'], '貼り付けて閉じる'],
-    [['Tab'], '履歴 ⇔ 定型文'],
-    [[combo(['Alt'], '数字')], '上から1〜10番目を即貼り付け'],
-    [[combo(['Ctrl'], 'P')], 'ピン留め切替'],
-    [[combo(['Ctrl'], 'D')], '履歴を削除'],
-    [['Esc'], '入力クリア / 閉じる'],
-  ].map(([k, d]) => `<tr><td><kbd>${k[0]}</kbd></td><td>${d}</td></tr>`).join('');
+  UI.closeOnBlur = s.close_on_blur; UI.fontSize = s.font_size;
+  $('blur').checked = UI.closeOnBlur; $('fontsize').value = String(UI.fontSize);
+  invoke('get_keys').then((k) => { K = { ...DEFAULT_KEYS, ...k }; drawKeys(); });
   curTheme = s.theme; applyTheme(curTheme); drawThemes();
   const r = document.querySelector(`input[name=pos][value=${s.position}]`); if (r) { r.checked = true; r.closest('label').classList.add('on'); }
   $('maxitems').value = s.max_items; $('maxkb').value = s.max_kb; $('count').textContent = s.count; $('dir').textContent = s.data_dir;

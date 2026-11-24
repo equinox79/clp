@@ -34,7 +34,7 @@ function render() {
   const terms = $q.value.trim().split(/\s+/).filter(Boolean);
   const re = terms.length ? new RegExp(terms.map(escRe).join('|'), 'gi') : null;
   if (!rows.length) {
-    $list.innerHTML = `<div class="empty">${mode === 'snippets' ? '定型文がありません（Ctrl+E で編集）' : '履歴がありません'}</div>`;
+    $list.innerHTML = `<div class="empty">${mode === 'snippets' ? `定型文がありません（${first('edit_snippets')} で編集）` : '履歴がありません'}</div>`;
     $prev.textContent = '';
     return;
   }
@@ -90,11 +90,59 @@ function choose(i) {
   if (r) invoke('choose', { id: r.id, mode });
 }
 
-document.getElementById('hint').textContent =
-  `↵ 貼付　Tab 履歴/定型文　${combo(['Alt'], '数字')} 即貼　${combo(['Ctrl'], 'P')} ピン　${combo(['Ctrl'], 'D')} 削除　Esc 閉じる`;
+/* ---------- キーバインド（設定画面で変更可。保存形式は "Ctrl+J" など） ---------- */
+let KEYS = DEFAULT_KEYS;
+let bindMap = {};
+const first = (a) => fmtHotkey((KEYS[a] || [])[0] || '');
 
-invoke('get_settings').then((s) => applyTheme(s.theme));
+function applyKeys(k) {
+  KEYS = { ...DEFAULT_KEYS, ...k };
+  bindMap = {};
+  for (const [act] of KEY_ACTIONS) for (const c of KEYS[act] || []) bindMap[c] = act;
+  document.getElementById('hint').textContent =
+    `${first('choose')} 貼付　${first('switch_tab')} 履歴/定型文　${combo([KEYS.quick_mod], '数字')} 即貼　` +
+    `${first('pin')} ピン　${first('delete')} 削除　${first('close')} 閉じる`;
+  if (!rows.length) render();
+}
+
+function modsOf(e) {
+  return [e.ctrlKey && 'Ctrl', e.altKey && 'Alt', e.shiftKey && 'Shift', e.metaKey && 'Super'].filter(Boolean);
+}
+
+const ACT = {
+  next: () => select(sel + 1),
+  prev: () => select(sel - 1),
+  choose: () => choose(sel),
+  switch_tab: () => setMode(mode === 'history' ? 'snippets' : 'history'),
+  close: () => { if ($q.value) { $q.value = ''; refresh(); } else invoke('hide_window'); },
+  pin: () => {
+    if (mode !== 'history' || !rows[sel]) return false;
+    invoke('toggle_pin', { id: rows[sel].id }).then(async () => {
+      cache.history = await invoke('search', { query: '', mode: 'history' });
+      const keep = rows[sel] && rows[sel].id;
+      await refresh();
+      const ni = rows.findIndex((r) => r.id === keep);
+      if (ni >= 0) select(ni);
+    });
+  },
+  delete: () => {
+    if (mode !== 'history' || !rows[sel]) return false;
+    const at = sel;
+    invoke('delete_item', { id: rows[sel].id }).then(async () => {
+      cache.history = await invoke('search', { query: '', mode: 'history' });
+      await refresh();
+      select(at);
+    });
+  },
+  edit_snippets: () => { if (mode !== 'snippets') return false; invoke('open_snippets'); },
+};
+
+invoke('get_keys').then(applyKeys);
+listen('keys', (e) => applyKeys(e.payload));
+const setFont = (px) => document.documentElement.style.setProperty('--fs', px + 'px');
+invoke('get_settings').then((s) => { applyTheme(s.theme); setFont(s.font_size); });
 listen('theme', (e) => applyTheme(e.payload));
+listen('ui', (e) => setFont(e.payload));
 
 listen('shown', (e) => {
   cache = e.payload;
@@ -113,45 +161,24 @@ $list.addEventListener('click', (e) => {
 document.addEventListener('keydown', (e) => {
   // IME変換中のキーはすべて無視（Enterでの誤貼付防止）
   if (e.isComposing || e.keyCode === 229) return;
-  const k = e.key;
-
   // macOS の Option+数字は別の文字になるため、e.key ではなく物理キー(e.code)で判定する
+  const c = eventCombo(e);
+  if (!c) return;
+  const mods = modsOf(e);
   const dm = /^Digit([0-9])$/.exec(e.code);
-  if (e.altKey && dm) { e.preventDefault(); choose((Number(dm[1]) + 9) % 10); return; }
-  if (k === 'Enter') { e.preventDefault(); choose(sel); return; }
-  if (k === 'ArrowDown' || (e.ctrlKey && k === 'j')) { e.preventDefault(); select(sel + 1); return; }
-  if (k === 'ArrowUp' || (e.ctrlKey && k === 'k')) { e.preventDefault(); select(sel - 1); return; }
-  if (k === 'Tab') { e.preventDefault(); setMode(mode === 'history' ? 'snippets' : 'history'); return; }
-  if (k === 'Escape') {
-    e.preventDefault();
-    if ($q.value) { $q.value = ''; refresh(); } else invoke('hide_window');
-    return;
+
+  // 上から1〜10番目を即貼り付け（修飾キー + 数字）
+  if (dm && mods.length === 1 && mods[0] === KEYS.quick_mod) {
+    e.preventDefault(); choose((Number(dm[1]) + 9) % 10); return;
   }
-  if (e.ctrlKey && k === 'p' && mode === 'history' && rows[sel]) {
-    e.preventDefault();
-    invoke('toggle_pin', { id: rows[sel].id }).then(async () => {
-      cache.history = await invoke('search', { query: '', mode: 'history' });
-      const keep = rows[sel] && rows[sel].id;
-      await refresh();
-      const ni = rows.findIndex((r) => r.id === keep);
-      if (ni >= 0) select(ni);
-    });
-    return;
-  }
-  if (((e.ctrlKey && k === 'd') || (k === 'Delete' && !$q.value)) && mode === 'history' && rows[sel]) {
-    e.preventDefault();
-    const at = sel;
-    invoke('delete_item', { id: rows[sel].id }).then(async () => {
-      cache.history = await invoke('search', { query: '', mode: 'history' });
-      await refresh();
-      select(at);
-    });
-    return;
-  }
-  if (e.ctrlKey && k === 'e' && mode === 'snippets') { e.preventDefault(); invoke('open_snippets'); return; }
   // 定型文タブ: 検索欄が空なら数字キー単体で即貼り
-  if (mode === 'snippets' && !$q.value && /^[0-9]$/.test(k) && !e.ctrlKey && !e.altKey) {
-    e.preventDefault();
-    choose((Number(k) + 9) % 10);
+  if (dm && !mods.length && KEYS.bare_digits && mode === 'snippets' && !$q.value) {
+    e.preventDefault(); choose((Number(dm[1]) + 9) % 10); return;
   }
+  const act = bindMap[c];
+  if (!act) return;
+  // Delete / Backspace 単体は、検索欄に文字があるときは文字の編集に使う
+  if ((c === 'Delete' || c === 'Backspace') && $q.value) return;
+  if (ACT[act]() === false) return;
+  e.preventDefault();
 });
