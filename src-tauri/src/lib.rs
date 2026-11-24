@@ -319,6 +319,97 @@ fn set_hotkey(app: AppHandle, hotkey: String) -> Result<(), String> {
     Ok(())
 }
 
+#[derive(Serialize, Deserialize)]
+struct BundleCfg {
+    hotkey: String,
+    theme: String,
+    position: String,
+    max_items: usize,
+    max_kb: usize,
+}
+
+#[derive(Serialize, Deserialize)]
+struct Bundle {
+    version: u32,
+    config: BundleCfg,
+    snippets: Vec<SnipDto>,
+}
+
+/// 設定・テーマ・定型文を1つの JSON に書き出す（履歴は機密を含みうるため対象外）。
+/// 戻り値は保存先パス。キャンセル時は空文字。
+#[tauri::command]
+async fn export_settings(app: AppHandle) -> Result<String, String> {
+    use tauri_plugin_dialog::DialogExt;
+    let st = app.state::<AppState>();
+    let snippets = st
+        .snips
+        .lock()
+        .unwrap()
+        .dto()
+        .map_err(|e| format!("snippets.toml に書式エラーがあるため書き出せません: {e}"))?;
+    let bundle = Bundle {
+        version: 1,
+        config: BundleCfg {
+            hotkey: st.hotkey.lock().unwrap().clone(),
+            theme: st.theme.lock().unwrap().clone(),
+            position: st.position.lock().unwrap().clone(),
+            max_items: st.max_items.load(Ordering::SeqCst),
+            max_kb: st.max_kb.load(Ordering::SeqCst),
+        },
+        snippets,
+    };
+    let Some(p) = app
+        .dialog()
+        .file()
+        .set_file_name("clp-settings.json")
+        .add_filter("clp 設定 (JSON)", &["json"])
+        .blocking_save_file()
+    else {
+        return Ok(String::new());
+    };
+    let path = p.into_path().map_err(|e| e.to_string())?;
+    let json = serde_json::to_string_pretty(&bundle).map_err(|e| e.to_string())?;
+    std::fs::write(&path, json).map_err(|e| e.to_string())?;
+    Ok(path.display().to_string())
+}
+
+/// JSON を読み込んで反映する。戻り値は結果メッセージ。キャンセル時は空文字。
+#[tauri::command]
+async fn import_settings(app: AppHandle) -> Result<String, String> {
+    use tauri_plugin_dialog::DialogExt;
+    let Some(p) = app
+        .dialog()
+        .file()
+        .add_filter("clp 設定 (JSON)", &["json"])
+        .blocking_pick_file()
+    else {
+        return Ok(String::new());
+    };
+    let path = p.into_path().map_err(|e| e.to_string())?;
+    let text = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
+    let b: Bundle = serde_json::from_str(&text)
+        .map_err(|e| format!("clp の設定ファイルとして読み込めません: {e}"))?;
+    if b.version > 1 {
+        return Err("このファイルは新しいバージョンの clp で作成されています".into());
+    }
+    if b.snippets.len() > snippets::MAX_SNIPPETS {
+        return Err(format!("定型文が上限（{}個）を超えています", snippets::MAX_SNIPPETS));
+    }
+    let c = b.config;
+    let n = b.snippets.len();
+    save_snippets(app.clone(), b.snippets)?;
+    set_theme(app.clone(), c.theme);
+    if matches!(c.position.as_str(), "center" | "mouse" | "caret") {
+        set_position(app.clone(), c.position);
+    }
+    set_limits(app.clone(), c.max_items, c.max_kb);
+    let mut msg = format!("読み込みました（定型文 {n} 件）");
+    if let Err(e) = set_hotkey(app.clone(), c.hotkey.clone()) {
+        msg += &format!("。ただしホットキー {} は設定できませんでした（{e}）", c.hotkey);
+    }
+    Ok(msg)
+}
+
 #[tauri::command]
 fn set_autostart(enabled: bool) -> Result<(), String> {
     platform::set_autostart(enabled)
@@ -398,6 +489,7 @@ fn data_dir(app: &tauri::App) -> PathBuf {
 
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
                 .with_handler(|app, _sc, ev| {
@@ -501,6 +593,8 @@ pub fn run() {
             set_hotkey,
             set_theme,
             set_position,
+            export_settings,
+            import_settings,
             set_limits,
             clear_history,
             open_dir,
