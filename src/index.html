@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>clp</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <div id="head">
+    <input id="q" type="text" placeholder="検索…" autocomplete="off" spellcheck="false" autofocus>
+    <div id="tabs"><span id="t-history" class="on">履歴</span><span id="t-snippets">定型文</span></div>
+  </div>
+  <div id="list"></div>
+  <pre id="preview"></pre>
+  <div id="hint">↵ 貼付　Tab 履歴/定型文　Alt+数字 即貼　Ctrl+P ピン　Ctrl+D 削除　Esc 閉じる</div>
+</div>
+<script src="themes.js"></script>
+<script src="main.js"></script>
+</body>
+</html>

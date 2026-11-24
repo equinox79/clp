@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>clp 設定</title>
+<style>
+:root { --bg:#fbfbfc; --fg:#1d1d1f; --sub:#6e6e73; --line:#e2e2e6; --sel:#e6efff; --mark:#ffe58a; --accent:#2f6df6; --err:#d33; }
+@media (prefers-color-scheme: dark) { :root { --bg:#232326; --fg:#ececee; --sub:#9a9aa2; --line:#38383d; --sel:#2f3d5c; --mark:#6b5a12; --accent:#6c9bff; --err:#ff7b7b; } }
+* { box-sizing: border-box; }
+html, body { height:100%; margin:0; }
+body { background:var(--bg); color:var(--fg); font:14px/1.5 "Yu Gothic UI","Segoe UI",sans-serif; display:grid; grid-template-columns:190px 1fr; overflow:hidden; }
+/* sidebar */
+nav { border-right:1px solid var(--line); padding:18px 10px; display:flex; flex-direction:column; gap:2px; background:color-mix(in srgb, var(--fg) 3%, var(--bg)); }
+nav .brand { font-weight:700; font-size:15px; padding:0 10px 14px; display:flex; align-items:center; gap:8px; }
+nav .brand i { width:22px; height:22px; border-radius:50%; background:var(--accent); display:inline-block; }
+nav button { all:unset; cursor:pointer; padding:8px 12px; border-radius:8px; display:flex; gap:10px; align-items:center; color:var(--sub); }
+nav button:hover { background:color-mix(in srgb, var(--fg) 7%, transparent); color:var(--fg); }
+nav button.on { background:var(--sel); color:var(--fg); font-weight:600; }
+/* content */
+main { overflow-y:auto; padding:24px 28px 30px; }
+section { display:none; max-width:560px; } section.on { display:block; }
+section.wide { max-width:none; height:100%; }
+h1 { font-size:18px; margin:0 0 16px; }
+.card { border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:14px; }
+.card h3 { margin:0 0 2px; font-size:13px; }
+.card p { margin:0 0 10px; font-size:12px; color:var(--sub); }
+.card .row:last-child { margin-bottom:0; }
+.row { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+.row .grow { flex:1; }
+input[type=text], input[type=number], textarea { background:transparent; color:var(--fg); border:1px solid var(--line); border-radius:8px; padding:7px 10px; font:inherit; outline:none; }
+input:focus, textarea:focus { border-color:var(--accent); }
+input[type=number] { width:110px; }
+button.btn { padding:6px 13px; border:1px solid var(--line); border-radius:8px; background:transparent; color:var(--fg); cursor:pointer; font:inherit; }
+button.btn:hover { background:color-mix(in srgb, var(--fg) 6%, transparent); }
+button.btn.pri { background:var(--accent); border-color:var(--accent); color:var(--accent-fg,#fff); }
+button.btn.danger { color:var(--err); border-color:color-mix(in srgb, var(--err) 50%, var(--line)); }
+button.btn:disabled { opacity:.4; cursor:default; }
+#hk { width:100%; text-align:center; font-size:16px; cursor:pointer; caret-color:transparent; }
+#hk.rec { border-color:var(--accent); outline:2px solid color-mix(in srgb, var(--accent) 40%, transparent); }
+.msg { min-height:18px; font-size:12px; color:var(--sub); } .msg.err { color:var(--err); }
+.seg { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+.seg label { border:2px solid var(--line); border-radius:10px; padding:10px 6px; text-align:center; cursor:pointer; font-size:12px; display:block; }
+.seg label.on { border-color:var(--accent); background:var(--sel); }
+.seg input { display:none; } .seg b { display:block; font-size:20px; font-weight:400; }
+/* switch */
+.sw { position:relative; width:42px; height:24px; flex:none; }
+.sw input { opacity:0; width:0; height:0; }
+.sw span { position:absolute; inset:0; background:color-mix(in srgb, var(--fg) 25%, transparent); border-radius:12px; transition:.15s; cursor:pointer; }
+.sw span::after { content:""; position:absolute; width:18px; height:18px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.15s; }
+.sw input:checked + span { background:var(--accent); } .sw input:checked + span::after { transform:translateX(18px); }
+/* themes */
+#themes { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+.th { border:2px solid var(--line); border-radius:10px; padding:8px; cursor:pointer; font-size:12px; text-align:center; }
+.th.on { border-color:var(--accent); }
+.th .sample { height:54px; border-radius:6px; margin-bottom:6px; padding:7px; border:1px solid rgba(128,128,128,.25); text-align:left; font-size:10px; line-height:1.3; overflow:hidden; }
+.th .sample .l1 { display:flex; align-items:center; gap:4px; font-weight:700; } .th .sample .dot { width:8px; height:8px; border-radius:50%; display:inline-block; }
+.th .sample .l2 { margin-top:3px; padding:1px 4px; border-radius:3px; }
+/* snippets */
+#snip { display:grid; grid-template-columns:230px 1fr; gap:14px; height:calc(100% - 92px); min-height:380px; }
+#slist { border:1px solid var(--line); border-radius:12px; overflow-y:auto; padding:6px; }
+.si { display:flex; gap:8px; align-items:center; padding:7px 8px; border-radius:8px; cursor:pointer; border:1px solid transparent; }
+.si.on { background:var(--sel); } .si.over { border-color:var(--accent); }
+.si .n { width:16px; text-align:right; font-size:11px; color:var(--sub); flex:none; }
+.si .t { flex:1; min-width:0; } .si .t b { display:block; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.si .t small { display:block; color:var(--sub); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+#sed { display:flex; flex-direction:column; gap:8px; min-height:0; }
+#sbody { flex:1; resize:none; font-family:"Cascadia Mono",Consolas,"Yu Gothic UI",monospace; font-size:13px; min-height:140px; }
+.chips { display:flex; gap:6px; flex-wrap:wrap; align-items:center; font-size:12px; color:var(--sub); }
+.chip { padding:2px 9px; border:1px solid var(--line); border-radius:10px; cursor:pointer; color:var(--fg); font-family:Consolas,monospace; }
+.chip:hover { background:var(--sel); }
+.bar { display:flex; gap:8px; align-items:center; }
+.empty { color:var(--sub); text-align:center; padding:40px 10px; }
+.banner { border:1px solid var(--err); color:var(--err); border-radius:10px; padding:10px 14px; margin-bottom:12px; font-size:12px; white-space:pre-wrap; }
+kbd { border:1px solid var(--line); border-bottom-width:2px; border-radius:5px; padding:0 6px; font:12px Consolas,monospace; }
+table { border-collapse:collapse; width:100%; } td { padding:5px 0; border-bottom:1px solid var(--line); font-size:13px; } td:first-child { width:150px; }
+</style>
+</head>
+<body>
+<nav>
+  <div class="brand"><i></i>clp</div>
+  <button data-p="general" class="on">⚙ 一般</button>
+  <button data-p="look">🎨 外観</button>
+  <button data-p="snip">📝 定型文</button>
+  <button data-p="hist">🗂 履歴</button>
+  <button data-p="about">ℹ 情報</button>
+</nav>
+<main>
+
+<section id="p-general" class="on">
+  <h1>一般</h1>
+  <div class="card">
+    <h3>呼び出しホットキー</h3>
+    <p>欄をクリックして、割り当てたいキーを押してください（Ctrl / Alt / Shift のいずれか必須）。</p>
+    <input id="hk" type="text" readonly>
+    <div class="row" style="margin-top:10px"><button class="btn" id="hkreset">既定に戻す (Ctrl+Alt+V)</button><span class="msg" id="hkmsg"></span></div>
+  </div>
+  <div class="card">
+    <h3>表示位置</h3>
+    <p>入力カーソルが取得できないアプリ（Chrome・VS Code など）では、マウス位置に表示します。</p>
+    <div class="seg" id="pos">
+      <label><input type="radio" name="pos" value="center"><b>🖥</b>画面中央</label>
+      <label><input type="radio" name="pos" value="mouse"><b>🖱</b>マウス位置</label>
+      <label><input type="radio" name="pos" value="caret"><b>⌨</b>入力カーソル付近</label>
+    </div>
+  </div>
+  <div class="card">
+    <div class="row"><div class="grow"><h3>ログイン時に自動で常駐</h3><p style="margin:0">ログイン時にトレイへ常駐します。</p></div>
+      <label class="sw"><input type="checkbox" id="auto"><span></span></label></div>
+    <div class="msg" id="automsg"></div>
+  </div>
+</section>
+
+<section id="p-look">
+  <h1>外観</h1>
+  <div class="card"><h3>テーマ</h3><p>選ぶとすぐ反映されます。</p><div id="themes"></div></div>
+</section>
+
+<section id="p-snip" class="wide">
+  <h1>定型文 <span class="msg" id="scount" style="font-weight:400;margin-left:8px"></span></h1>
+  <div id="sbanner"></div>
+  <div id="snip">
+    <div style="display:flex;flex-direction:column;gap:8px;min-height:0">
+      <div id="slist"></div>
+      <div class="bar"><button class="btn pri" id="sadd">＋ 追加</button><span class="msg" id="sstat" style="margin-left:auto"></span></div>
+    </div>
+    <div id="sed"></div>
+  </div>
+</section>
+
+<section id="p-hist">
+  <h1>履歴</h1>
+  <div class="card">
+    <h3>保存の上限</h3>
+    <p>ピン留めした項目は上限の対象外です。変更はすぐ反映されます。</p>
+    <div class="row"><span class="grow">履歴の最大件数</span><input type="number" id="maxitems" min="50" max="100000" step="100"> 件</div>
+    <div class="row"><span class="grow">1件の最大サイズ</span><input type="number" id="maxkb" min="1" max="20000" step="64"> KB</div>
+    <div class="msg" id="limmsg"></div>
+  </div>
+  <div class="card">
+    <h3>履歴の削除</h3>
+    <p>現在 <b id="count">0</b> 件。ピン留め以外をすべて削除します（元に戻せません）。</p>
+    <button class="btn danger" id="clear">履歴をすべて削除</button> <span class="msg" id="clrmsg"></span>
+  </div>
+</section>
+
+<section id="p-about">
+  <h1>情報</h1>
+  <div class="card"><h3>データの場所</h3><p id="dir" style="user-select:text"></p><button class="btn" id="opendir">フォルダを開く</button></div>
+  <div class="card"><h3>キー操作</h3>
+    <table>
+      <tr><td><kbd>Enter</kbd></td><td>貼り付けて閉じる</td></tr>
+      <tr><td><kbd>Tab</kbd></td><td>履歴 ⇔ 定型文</td></tr>
+      <tr><td><kbd>Alt</kbd>+<kbd>数字</kbd></td><td>上から1〜10番目を即貼り付け</td></tr>
+      <tr><td><kbd>Ctrl</kbd>+<kbd>P</kbd></td><td>ピン留め切替</td></tr>
+      <tr><td><kbd>Ctrl</kbd>+<kbd>D</kbd></td><td>履歴を削除</td></tr>
+      <tr><td><kbd>Esc</kbd></td><td>入力クリア / 閉じる</td></tr>
+    </table>
+  </div>
+</section>
+
+</main>
+<script src="themes.js"></script>
+<script>
+const { invoke } = window.__TAURI__.core;
+const $ = (id) => document.getElementById(id);
+const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const say = (el, t, err) => { el.textContent = t; el.classList.toggle('err', !!err); };
+let S = {};
+
+/* ---------- nav ---------- */
+document.querySelectorAll('nav button').forEach((b) => b.addEventListener('click', () => {
+  document.querySelectorAll('nav button').forEach((x) => x.classList.toggle('on', x === b));
+  document.querySelectorAll('section').forEach((s) => s.classList.toggle('on', s.id === 'p-' + b.dataset.p));
+  if (b.dataset.p === 'snip') loadSnips();
+  if (b.dataset.p === 'hist') refreshCount();
+}));
+
+/* ---------- general ---------- */
+function keyName(e) {
+  const c = e.code;
+  if (/^Key[A-Z]$/.test(c)) return c.slice(3);
+  if (/^Digit[0-9]$/.test(c)) return c.slice(5);
+  if (/^(F[0-9]{1,2}|Space|Enter|Tab|Backquote|Minus|Equal|Comma|Period|Slash|Semicolon|Quote|BracketLeft|BracketRight|Backslash|Insert|Delete|Home|End|PageUp|PageDown)$/.test(c)) return c;
+  if (/^Arrow/.test(c)) return c.slice(5);
+  return null;
+}
+async function applyHotkey(hk) {
+  try { await invoke('set_hotkey', { hotkey: hk }); $('hk').value = hk; say($('hkmsg'), '保存しました'); }
+  catch (err) { say($('hkmsg'), String(err), true); $('hk').value = (await invoke('get_settings')).hotkey; }
+}
+$('hk').addEventListener('focus', () => { $('hk').classList.add('rec'); say($('hkmsg'), 'キーを押してください…'); });
+$('hk').addEventListener('blur', () => $('hk').classList.remove('rec'));
+$('hk').addEventListener('keydown', (e) => {
+  e.preventDefault();
+  if (['Control', 'Shift', 'Alt', 'Meta'].includes(e.key)) return;
+  const k = keyName(e);
+  const mods = [e.ctrlKey && 'Ctrl', e.altKey && 'Alt', e.shiftKey && 'Shift', e.metaKey && 'Super'].filter(Boolean);
+  if (!k) return say($('hkmsg'), 'このキーは使えません', true);
+  if (!mods.length) return say($('hkmsg'), 'Ctrl / Alt / Shift のいずれかと組み合わせてください', true);
+  applyHotkey([...mods, k].join('+')); $('hk').blur();
+});
+$('hkreset').addEventListener('click', () => applyHotkey('Ctrl+Alt+V'));
+$('pos').addEventListener('change', (e) => {
+  invoke('set_position', { position: e.target.value });
+  document.querySelectorAll('#pos label').forEach((l) => l.classList.toggle('on', l.querySelector('input').checked));
+});
+$('auto').addEventListener('change', async () => {
+  try { await invoke('set_autostart', { enabled: $('auto').checked }); say($('automsg'), '保存しました'); }
+  catch (err) { say($('automsg'), String(err), true); $('auto').checked = !$('auto').checked; }
+});
+
+/* ---------- look ---------- */
+let curTheme = 'auto';
+function drawThemes() {
+  $('themes').innerHTML = THEMES.map((t) => {
+    const v = t.v;
+    const sample = v
+      ? `<div class="sample" style="background:${v.bg};color:${v.fg}"><div class="l1"><span class="dot" style="background:${v.accent}"></span>clp</div><div class="l2" style="background:${v.sel}">選択行</div></div>`
+      : `<div class="sample" style="background:linear-gradient(100deg,#fbfbfc 50%,#232326 50%);color:#888;text-align:center;padding-top:16px;font-size:13px">Auto</div>`;
+    return `<div class="th${t.id === curTheme ? ' on' : ''}" data-id="${t.id}">${sample}${t.name}</div>`;
+  }).join('');
+}
+$('themes').addEventListener('click', (e) => {
+  const el = e.target.closest('.th'); if (!el) return;
+  curTheme = el.dataset.id; applyTheme(curTheme); drawThemes();
+  invoke('set_theme', { theme: curTheme });
+});
+
+/* ---------- history ---------- */
+async function refreshCount() { $('count').textContent = (await invoke('get_settings')).count; }
+function saveLimits() {
+  const mi = Math.max(50, Math.min(100000, Number($('maxitems').value) || 3000));
+  const mk = Math.max(1, Math.min(20000, Number($('maxkb').value) || 1024));
+  $('maxitems').value = mi; $('maxkb').value = mk;
+  invoke('set_limits', { maxItems: mi, maxKb: mk }).then(() => { say($('limmsg'), '保存しました'); refreshCount(); });
+}
+$('maxitems').addEventListener('change', saveLimits);
+$('maxkb').addEventListener('change', saveLimits);
+let clrTimer;
+$('clear').addEventListener('click', async () => {
+  if (!$('clear').dataset.arm) {
+    $('clear').dataset.arm = 1; $('clear').textContent = '本当に削除する（もう一度クリック）';
+    clrTimer = setTimeout(() => { delete $('clear').dataset.arm; $('clear').textContent = '履歴をすべて削除'; }, 3000);
+    return;
+  }
+  clearTimeout(clrTimer); delete $('clear').dataset.arm; $('clear').textContent = '履歴をすべて削除';
+  const n = await invoke('clear_history'); say($('clrmsg'), `${n} 件削除しました`); refreshCount();
+});
+$('opendir').addEventListener('click', () => invoke('open_dir'));
+
+/* ---------- snippets ---------- */
+const MAX_SNIP = 30;
+let list = [], idx = 0, loaded = false, saveTimer = null, dirty = false, dragFrom = -1;
+
+async function loadSnips() {
+  if (dirty) return;
+  try {
+    list = await invoke('get_snippets'); $('sbanner').innerHTML = ''; loaded = true;
+    if (idx >= list.length) idx = Math.max(0, list.length - 1);
+    drawSnips();
+  } catch (err) {
+    loaded = false; list = [];
+    $('sbanner').innerHTML = `<div class="banner">snippets.toml に書式エラーがあります。ファイルを直すと自動で読み込まれます。\n${esc(String(err))}</div>` +
+      `<button class="btn" id="sopen">snippets.toml を開く</button> <button class="btn" id="sreload">再読み込み</button>`;
+    $('sopen').onclick = () => invoke('open_snippets'); $('sreload').onclick = loadSnips;
+    drawSnips();
+  }
+}
+
+function drawSnips() {
+  $('scount').textContent = `${list.length} / ${MAX_SNIP}`;
+  $('sadd').disabled = !loaded || list.length >= MAX_SNIP;
+  $('slist').innerHTML = list.length
+    ? list.map((s, i) => `<div class="si${i === idx ? ' on' : ''}" draggable="true" data-i="${i}"><span class="n">${i < 10 ? (i + 1) % 10 : ''}</span>` +
+        `<span class="t"><b>${esc(s.title) || '(無題)'}</b><small>${esc(s.body.replace(/\s+/g, ' ')) || '&nbsp;'}</small></span></div>`).join('')
+    : `<div class="empty">${loaded ? '定型文がありません<br>「＋ 追加」で作成します' : ''}</div>`;
+  drawEditor();
+}
+
+function drawEditor() {
+  const s = list[idx];
+  if (!s) { $('sed').innerHTML = ''; return; }
+  $('sed').innerHTML =
+    `<input type="text" id="stitle" placeholder="タイトル（一覧と検索に使われます）" value="${esc(s.title)}">` +
+    `<textarea id="sbody" placeholder="貼り付けるテキスト" spellcheck="false"></textarea>` +
+    `<div class="chips">変数を挿入: ${['{date}', '{time}', '{datetime}', '{clipboard}'].map((v) => `<span class="chip" data-v="${v}">${v}</span>`).join('')}</div>` +
+    `<div class="bar"><button class="btn" id="sup">↑ 上へ</button><button class="btn" id="sdown">↓ 下へ</button><button class="btn" id="sdup">複製</button>` +
+    `<button class="btn danger" id="sdel" style="margin-left:auto">削除</button></div>`;
+  $('sbody').value = s.body;
+  $('stitle').oninput = () => { list[idx].title = $('stitle').value; const b = $('slist').children[idx]; if (b) b.querySelector('b').textContent = list[idx].title || '(無題)'; queueSave(); };
+  $('sbody').oninput = () => { list[idx].body = $('sbody').value; const b = $('slist').children[idx]; if (b) b.querySelector('small').textContent = list[idx].body.replace(/\s+/g, ' ') || ' '; queueSave(); };
+  $('sed').querySelectorAll('.chip').forEach((c) => c.onclick = () => {
+    const t = $('sbody'), a = t.selectionStart, b = t.selectionEnd;
+    t.setRangeText(c.dataset.v, a, b, 'end'); t.focus(); t.dispatchEvent(new Event('input'));
+  });
+  $('sup').onclick = () => move(idx, idx - 1);
+  $('sdown').onclick = () => move(idx, idx + 1);
+  $('sdup').onclick = () => { if (list.length < MAX_SNIP) { list.splice(idx + 1, 0, { ...list[idx], title: list[idx].title + ' (コピー)' }); idx++; drawSnips(); queueSave(); } };
+  let arm;
+  $('sdel').onclick = () => {
+    if (!arm) { arm = 1; $('sdel').textContent = '本当に削除'; setTimeout(() => { arm = 0; if ($('sdel')) $('sdel').textContent = '削除'; }, 3000); return; }
+    list.splice(idx, 1); idx = Math.max(0, Math.min(idx, list.length - 1)); drawSnips(); queueSave();
+  };
+}
+
+function move(from, to) {
+  if (to < 0 || to >= list.length || from === to) return;
+  const [x] = list.splice(from, 1); list.splice(to, 0, x); idx = to; drawSnips(); queueSave();
+}
+
+$('slist').addEventListener('click', (e) => { const el = e.target.closest('.si'); if (el) { idx = Number(el.dataset.i); drawSnips(); } });
+$('slist').addEventListener('dragstart', (e) => { const el = e.target.closest('.si'); if (el) { dragFrom = Number(el.dataset.i); e.dataTransfer.effectAllowed = 'move'; } });
+$('slist').addEventListener('dragover', (e) => {
+  e.preventDefault(); const el = e.target.closest('.si');
+  document.querySelectorAll('.si.over').forEach((x) => x.classList.remove('over')); if (el) el.classList.add('over');
+});
+$('slist').addEventListener('drop', (e) => {
+  e.preventDefault(); const el = e.target.closest('.si');
+  if (el && dragFrom >= 0) move(dragFrom, Number(el.dataset.i)); dragFrom = -1; drawSnips();
+});
+$('sadd').addEventListener('click', () => {
+  if (list.length >= MAX_SNIP) return;
+  list.push({ title: '新しい定型文', body: '' }); idx = list.length - 1; drawSnips(); queueSave();
+  $('stitle').focus(); $('stitle').select();
+});
+
+function queueSave() {
+  dirty = true; say($('sstat'), '編集中…');
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    try { await invoke('save_snippets', { list }); dirty = false; say($('sstat'), '保存しました ✓'); }
+    catch (err) { say($('sstat'), '保存に失敗: ' + err, true); }
+  }, 500);
+}
+
+window.addEventListener('focus', () => { if ($('p-snip').classList.contains('on')) loadSnips(); });
+
+/* ---------- init ---------- */
+invoke('get_settings').then((s) => {
+  S = s;
+  $('hk').value = s.hotkey; $('auto').checked = s.autostart;
+  curTheme = s.theme; applyTheme(curTheme); drawThemes();
+  const r = document.querySelector(`input[name=pos][value=${s.position}]`); if (r) { r.checked = true; r.closest('label').classList.add('on'); }
+  $('maxitems').value = s.max_items; $('maxkb').value = s.max_kb; $('count').textContent = s.count; $('dir').textContent = s.data_dir;
+});
+</script>
+</body>
+</html>

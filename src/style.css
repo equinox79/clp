@@ -1,0 +1,31 @@
+:root {
+  --bg: #fbfbfc; --fg: #1d1d1f; --sub: #6e6e73; --line: #e2e2e6;
+  --sel: #e6efff; --mark: #ffe58a; --accent: #2f6df6;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #232326; --fg: #ececee; --sub: #9a9aa2; --line: #38383d;
+          --sel: #2f3d5c; --mark: #6b5a12; --accent: #6c9bff; }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: transparent; overflow: hidden;
+  font: 14px/1.4 "Yu Gothic UI", "Segoe UI", system-ui, sans-serif; color: var(--fg); user-select: none; }
+#app { height: 100vh; display: grid; grid-template-rows: auto 1fr 92px auto;
+  background: var(--bg); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+#head { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+#q { flex: 1; border: 0; outline: 0; background: transparent; color: var(--fg); font-size: 16px; user-select: text; }
+#tabs { display: flex; gap: 2px; font-size: 12px; }
+#tabs span { padding: 2px 9px; border-radius: 10px; color: var(--sub); }
+#tabs span.on { background: var(--accent); color: var(--accent-fg, #fff); }
+#list { overflow-y: auto; }
+.row { display: flex; align-items: baseline; gap: 8px; padding: 5px 14px; cursor: default; }
+.row.sel { background: var(--sel); }
+.row .no { width: 14px; color: var(--sub); font-size: 11px; text-align: right; flex: none; }
+.row .pin { width: 14px; flex: none; font-size: 11px; }
+.row .label { font-weight: 600; flex: none; max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row .txt { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row .ts { color: var(--sub); font-size: 11px; flex: none; }
+mark { background: var(--mark); color: inherit; border-radius: 2px; }
+#preview { margin: 0; padding: 8px 14px; border-top: 1px solid var(--line); overflow: hidden;
+  white-space: pre-wrap; word-break: break-all; font: 12px/1.4 "Cascadia Mono", Consolas, "Yu Gothic UI", monospace; color: var(--sub); }
+#hint { padding: 4px 14px; font-size: 11px; color: var(--sub); border-top: 1px solid var(--line); }
+.empty { padding: 24px; text-align: center; color: var(--sub); }
