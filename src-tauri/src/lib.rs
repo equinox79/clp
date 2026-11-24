@@ -32,6 +32,11 @@ struct AppState {
     shadow: AtomicBool,
     glass: AtomicBool,
     keys: Mutex<Keys>,
+    /// 履歴に残さないアプリ（小文字の実行ファイル名 / macOS はアプリ名・Bundle ID）
+    exclude: Mutex<Vec<String>>,
+    /// 記録の一時停止（再起動で解除。保存しない）
+    paused: AtomicBool,
+    recent: Mutex<Vec<String>>,
     update_available: Mutex<Option<String>>,
     store: Mutex<Store>,
     snips: Mutex<Snippets>,
@@ -51,6 +56,11 @@ struct Keys {
     delete: Vec<String>,
     edit_snippets: Vec<String>,
     close: Vec<String>,
+    /// 整形して貼り付け（前後の空白を除去 / 改行を除いて1行に / 大文字 / 小文字）
+    paste_trim: Vec<String>,
+    paste_oneline: Vec<String>,
+    paste_upper: Vec<String>,
+    paste_lower: Vec<String>,
     /// 「上から1〜10番目を即貼り付け」の修飾キー（Ctrl / Alt / Shift / Super）
     quick_mod: String,
     /// 定型文タブで検索欄が空のとき、数字キー単体で即貼り付けする
@@ -72,6 +82,10 @@ impl Default for Keys {
             delete: v(&["Ctrl+D", "Delete"]),
             edit_snippets: v(&["Ctrl+E"]),
             close: v(&["Escape"]),
+            paste_trim: v(&["Shift+Enter"]),
+            paste_oneline: v(&["Ctrl+Enter"]),
+            paste_upper: v(&["Ctrl+Shift+U"]),
+            paste_lower: v(&["Ctrl+Shift+L"]),
             quick_mod: "Alt".into(),
             bare_digits: true,
         }
@@ -93,6 +107,8 @@ struct Config {
     shadow: bool,
     /// 窓の背景をすりガラス風にする（macOS: vibrancy / Windows: Acrylic）
     glass: bool,
+    /// 履歴に残さないアプリ
+    exclude_apps: Vec<String>,
     keys: Keys,
 }
 
@@ -109,6 +125,7 @@ impl Default for Config {
             font_size: 14,
             shadow: default_shadow(),
             glass: false,
+            exclude_apps: Vec::new(),
             keys: Keys::default(),
         }
     }
@@ -118,6 +135,7 @@ impl Default for Config {
 struct Shown {
     history: Vec<Row>,
     snippets: Vec<Row>,
+    paused: bool,
 }
 
 fn get_clipboard() -> Option<String> {
@@ -229,6 +247,7 @@ fn show_main(app: &AppHandle) {
         Shown {
             history: st.store.lock().unwrap().search(""),
             snippets: sn.search(""),
+            paused: st.paused.load(Ordering::SeqCst),
         }
     };
     let _ = app.emit("shown", payload);
@@ -262,8 +281,19 @@ fn full_text(app: AppHandle, id: i64, mode: String) -> String {
     t.unwrap_or_default().chars().take(3000).collect()
 }
 
+/// 貼り付け前の整形
+fn transform(text: &str, kind: Option<&str>) -> String {
+    match kind {
+        Some("trim") => text.trim().to_string(),
+        Some("oneline") => text.split(['\r', '\n']).map(str::trim).filter(|l| !l.is_empty()).collect::<Vec<_>>().join(" "),
+        Some("upper") => text.to_uppercase(),
+        Some("lower") => text.to_lowercase(),
+        _ => text.to_string(),
+    }
+}
+
 #[tauri::command]
-fn choose(app: AppHandle, id: i64, mode: String) -> Result<(), String> {
+fn choose(app: AppHandle, id: i64, mode: String, xform: Option<String>) -> Result<(), String> {
     let st = app.state::<AppState>();
     let text = if mode == "snippets" {
         let clip = get_clipboard().unwrap_or_default();
@@ -274,6 +304,10 @@ fn choose(app: AppHandle, id: i64, mode: String) -> Result<(), String> {
         s.get_text(id)
     }
     .ok_or("not found")?;
+    let text = transform(&text, xform.as_deref());
+    if text.is_empty() {
+        return Err("empty".into());
+    }
 
     st.self_hash.store(fnv(&text), Ordering::SeqCst);
     if !set_clipboard(&text) {
@@ -346,9 +380,39 @@ fn save_config(st: &AppState) {
             font_size: st.font_size.load(Ordering::SeqCst),
             shadow: st.shadow.load(Ordering::SeqCst),
             glass: st.glass.load(Ordering::SeqCst),
+            exclude_apps: st.exclude.lock().unwrap().clone(),
             keys: st.keys.lock().unwrap().clone(),
         },
     );
+}
+
+fn norm_apps(list: Vec<String>) -> Vec<String> {
+    let mut out: Vec<String> = Vec::new();
+    for s in list {
+        let s = s.trim().to_lowercase();
+        if !s.is_empty() && !out.contains(&s) {
+            out.push(s);
+        }
+    }
+    out
+}
+
+#[tauri::command]
+fn get_excludes(app: AppHandle) -> Vec<String> {
+    app.state::<AppState>().exclude.lock().unwrap().clone()
+}
+
+#[tauri::command]
+fn set_excludes(app: AppHandle, list: Vec<String>) {
+    let st = app.state::<AppState>();
+    *st.exclude.lock().unwrap() = norm_apps(list);
+    save_config(&st);
+}
+
+/// 最近コピーしたアプリ（設定画面の「除外に追加」候補）
+#[tauri::command]
+fn recent_apps(app: AppHandle) -> Vec<String> {
+    app.state::<AppState>().recent.lock().unwrap().clone()
 }
 
 #[tauri::command]
@@ -576,6 +640,8 @@ struct BundleCfg {
     shadow: bool,
     #[serde(default)]
     glass: bool,
+    #[serde(default)]
+    exclude_apps: Vec<String>,
 }
 
 fn default_true() -> bool {
@@ -621,6 +687,7 @@ async fn export_settings(app: AppHandle) -> Result<String, String> {
             font_size: st.font_size.load(Ordering::SeqCst),
             shadow: st.shadow.load(Ordering::SeqCst),
             glass: st.glass.load(Ordering::SeqCst),
+            exclude_apps: st.exclude.lock().unwrap().clone(),
         },
         snippets,
     };
@@ -671,6 +738,7 @@ async fn import_settings(app: AppHandle) -> Result<String, String> {
     set_limits(app.clone(), c.max_items, c.max_kb);
     set_ui(app.clone(), c.close_on_blur, c.font_size);
     set_effects(app.clone(), c.shadow, c.glass);
+    set_excludes(app.clone(), c.exclude_apps);
     if let Err(e) = set_keys(app.clone(), c.keys) {
         return Err(format!("キー設定が不正です: {e}"));
     }
@@ -717,11 +785,24 @@ fn open_snippets(app: AppHandle) {
 // ---------- clipboard monitor ----------
 
 fn on_clipboard_changed(app: &AppHandle) {
-    if platform::clip_excluded() {
+    let st = app.state::<AppState>();
+    if st.paused.load(Ordering::SeqCst) || platform::clip_excluded() {
         return;
     }
+    let src = platform::foreground_app();
+    if !src.is_empty() {
+        if st.exclude.lock().unwrap().iter().any(|e| src.contains(e)) {
+            return;
+        }
+        let mut r = st.recent.lock().unwrap();
+        let name = src[0].clone();
+        if name != "clp.exe" && name != "clp" {
+            r.retain(|x| *x != name);
+            r.insert(0, name);
+            r.truncate(8);
+        }
+    }
     let Some(text) = get_clipboard() else { return };
-    let st = app.state::<AppState>();
     if text.trim().is_empty() || text.len() > st.max_kb.load(Ordering::SeqCst) * 1024 {
         return;
     }
@@ -796,6 +877,9 @@ pub fn run() {
                 shadow: AtomicBool::new(cfg.shadow),
                 glass: AtomicBool::new(cfg.glass),
                 keys: Mutex::new(cfg.keys.clone()),
+                exclude: Mutex::new(norm_apps(cfg.exclude_apps.clone())),
+                paused: AtomicBool::new(false),
+                recent: Mutex::new(Vec::new()),
                 update_available: Mutex::new(None),
                 store: Mutex::new(store),
                 snips: Mutex::new(Snippets::new(dir.join("snippets.toml"))),
@@ -810,9 +894,11 @@ pub fn run() {
             let m_show = MenuItem::with_id(app, "show", "表示", true, None::<&str>)?;
             let m_snip = MenuItem::with_id(app, "snip", "snippets.toml を開く", true, None::<&str>)?;
             let m_set = MenuItem::with_id(app, "settings", "設定…", true, None::<&str>)?;
+            let m_pause = tauri::menu::CheckMenuItem::with_id(app, "pause", "記録を一時停止", true, false, None::<&str>)?;
             let m_quit = MenuItem::with_id(app, "quit", "終了", true, None::<&str>)?;
             let m_upd = MenuItem::with_id(app, "update", "更新を確認…", true, None::<&str>)?;
-            let menu = Menu::with_items(app, &[&m_show, &m_snip, &m_set, &m_upd, &m_quit])?;
+            let menu = Menu::with_items(app, &[&m_show, &m_pause, &m_snip, &m_set, &m_upd, &m_quit])?;
+            let pause_item = m_pause.clone();
             let mut tray = TrayIconBuilder::with_id("main")
                 .menu(&menu)
                 .show_menu_on_left_click(false)
@@ -820,8 +906,16 @@ pub fn run() {
             if let Some(icon) = app.default_window_icon() {
                 tray = tray.icon(icon.clone());
             }
-            tray.on_menu_event(|app, ev| match ev.id.as_ref() {
+            tray.on_menu_event(move |app, ev| match ev.id.as_ref() {
                 "show" => show_main(app),
+                "pause" => {
+                    // CheckMenuItem は押すと自動で反転する。その状態をそのまま採用する
+                    let on = pause_item.is_checked().unwrap_or(false);
+                    app.state::<AppState>().paused.store(on, Ordering::SeqCst);
+                    if let Some(t) = app.tray_by_id("main") {
+                        let _ = t.set_tooltip(Some(if on { "clp（記録を一時停止中）" } else { "clp" }));
+                    }
+                }
                 "snip" => open_snippets(app.clone()),
                 "settings" | "update" => open_settings(app),
                 "quit" => app.exit(0),
@@ -877,6 +971,9 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             search,
+            get_excludes,
+            set_excludes,
+            recent_apps,
             full_text,
             choose,
             toggle_pin,

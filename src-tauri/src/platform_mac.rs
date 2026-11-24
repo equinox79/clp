@@ -152,6 +152,29 @@ pub fn foreground() -> isize {
     })
 }
 
+/// 前面アプリの識別名（小文字のアプリ名と Bundle ID）
+pub fn foreground_app() -> Vec<String> {
+    autoreleasepool(|_| unsafe {
+        let ws: *mut AnyObject = msg_send![class!(NSWorkspace), sharedWorkspace];
+        let app: *mut AnyObject = msg_send![ws, frontmostApplication];
+        if app.is_null() {
+            return vec![];
+        }
+        let mut out = Vec::new();
+        for sel in 0..2 {
+            let s: *mut AnyObject = if sel == 0 { msg_send![app, localizedName] } else { msg_send![app, bundleIdentifier] };
+            if s.is_null() {
+                continue;
+            }
+            let c: *const c_char = msg_send![s, UTF8String];
+            if !c.is_null() {
+                out.push(CStr::from_ptr(c).to_string_lossy().to_lowercase());
+            }
+        }
+        out
+    })
+}
+
 pub fn restore_foreground(target: isize, timeout: Duration) {
     if target == 0 {
         return;

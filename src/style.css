@@ -38,3 +38,7 @@ html.glass #head, html.glass #preview, html.glass #hint { border-color: color-mi
 html.glass .row.sel { background: color-mix(in srgb, var(--sel) 92%, transparent); }
 /* Windows 11 は影を付けると OS が角を 8px で丸め、1px の枠も付ける */
 html.win.shadow #app { border-radius: 8px; border-color: transparent; }
+
+#paused { font-size: 11px; color: var(--accent); white-space: nowrap; }
+#paused[hidden] { display: none; }
+.ctl { color: var(--accent); opacity: .75; }

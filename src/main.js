@@ -59,12 +59,38 @@ function select(i) {
   updatePreview();
 }
 
+/** プレビュー用: 見えない文字（改行・タブ・行末の空白・全角空白・制御文字など）を記号で可視化する */
+function visible(text) {
+  const c = (s) => `<span class="ctl">${s}</span>`;
+  return text.split(/(?<=\n)/).map((line) => {
+    const m = /^([\s\S]*?)(\r?\n?)$/.exec(line);
+    let body = m[1], eol = m[2];
+    const tw = /[ ]+$/.exec(body);
+    const trail = tw ? tw[0].length : 0;
+    if (trail) body = body.slice(0, -trail);
+    let out = '';
+    for (const ch of body) {
+      const n = ch.codePointAt(0);
+      if (ch === '\t') out += c('→') + '\t';
+      else if (n === 0x3000) out += c('□');
+      else if (n === 0xa0) out += c('⍽');
+      else if (n >= 0x200b && n <= 0x200d || n === 0xfeff || n === 0x2060) out += c('·');
+      else if (n < 0x20 || n === 0x7f) out += c(String.fromCodePoint(n === 0x7f ? 0x2421 : 0x2400 + n));
+      else out += esc(ch);
+    }
+    if (trail) out += c('·'.repeat(Math.min(trail, 20)));
+    if (eol.includes('\r')) out += c('␍');
+    if (eol.includes('\n')) out += c('↵') + '\n';
+    return out;
+  }).join('');
+}
+
 async function updatePreview() {
   const r = rows[sel];
   if (!r) return;
   const my = ++seq;
   const t = await invoke('full_text', { id: r.id, mode });
-  if (my === seq) $prev.textContent = t;
+  if (my === seq) $prev.innerHTML = visible(t);
 }
 
 async function refresh() {
@@ -85,9 +111,9 @@ function setMode(m) {
   refresh();
 }
 
-function choose(i) {
+function choose(i, xform) {
   const r = rows[i];
-  if (r) invoke('choose', { id: r.id, mode });
+  if (r) invoke('choose', { id: r.id, mode, xform: xform || null });
 }
 
 /* ---------- キーバインド（設定画面で変更可。保存形式は "Ctrl+J" など） ---------- */
@@ -101,7 +127,7 @@ function applyKeys(k) {
   for (const [act] of KEY_ACTIONS) for (const c of KEYS[act] || []) bindMap[c] = act;
   document.getElementById('hint').textContent =
     `${first('choose')} 貼付　${first('switch_tab')} 履歴/定型文　${combo([KEYS.quick_mod], '数字')} 即貼　` +
-    `${first('pin')} ピン　${first('delete')} 削除　${first('close')} 閉じる`;
+    `${first('pin')} ピン　${first('delete')} 削除　${first('paste_trim')} 空白除去　${first('close')} 閉じる`;
   if (!rows.length) render();
 }
 
@@ -113,6 +139,10 @@ const ACT = {
   next: () => select(sel + 1),
   prev: () => select(sel - 1),
   choose: () => choose(sel),
+  paste_trim: () => choose(sel, 'trim'),
+  paste_oneline: () => choose(sel, 'oneline'),
+  paste_upper: () => choose(sel, 'upper'),
+  paste_lower: () => choose(sel, 'lower'),
   switch_tab: () => setMode(mode === 'history' ? 'snippets' : 'history'),
   close: () => { if ($q.value) { $q.value = ''; refresh(); } else invoke('hide_window'); },
   pin: () => {
@@ -153,6 +183,7 @@ listen('effects', (e) => setEffects(e.payload));
 
 listen('shown', (e) => {
   cache = e.payload;
+  document.getElementById('paused').hidden = !e.payload.paused;
   $q.value = '';
   setMode('history');
   $q.focus();

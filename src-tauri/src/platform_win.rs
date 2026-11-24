@@ -74,6 +74,34 @@ pub fn foreground() -> isize {
     unsafe { GetForegroundWindow().0 as isize }
 }
 
+/// 前面アプリの識別名（小文字の実行ファイル名。取得できなければ空）
+pub fn foreground_app() -> Vec<String> {
+    use windows::core::PWSTR;
+    use windows::Win32::Foundation::CloseHandle;
+    use windows::Win32::System::Threading::{
+        OpenProcess, QueryFullProcessImageNameW, PROCESS_NAME_WIN32, PROCESS_QUERY_LIMITED_INFORMATION,
+    };
+    unsafe {
+        let hwnd = GetForegroundWindow();
+        let mut pid = 0u32;
+        GetWindowThreadProcessId(hwnd, Some(&mut pid));
+        if pid == 0 {
+            return vec![];
+        }
+        let Ok(h) = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid) else { return vec![] };
+        let mut buf = [0u16; 520];
+        let mut len = buf.len() as u32;
+        let ok = QueryFullProcessImageNameW(h, PROCESS_NAME_WIN32, PWSTR(buf.as_mut_ptr()), &mut len).is_ok();
+        let _ = CloseHandle(h);
+        if !ok {
+            return vec![];
+        }
+        let path = String::from_utf16_lossy(&buf[..len as usize]);
+        let name = path.rsplit(['\\', '/']).next().unwrap_or("").to_lowercase();
+        if name.is_empty() { vec![] } else { vec![name] }
+    }
+}
+
 /// 前面ウィンドウが `target` に戻るのを待つ（固定スリープではなくポーリング）
 pub fn restore_foreground(target: isize, timeout: Duration) {
     if target == 0 {

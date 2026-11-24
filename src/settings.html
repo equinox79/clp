@@ -174,6 +174,13 @@ table { border-collapse:collapse; width:100%; } td { padding:5px 0; border-botto
     <div class="msg" id="limmsg"></div>
   </div>
   <div class="card">
+    <h3>記録しないアプリ</h3>
+    <p>ここに書いたアプリでコピーした内容は、履歴に残しません。1行に1つ、<span id="exhelp"></span>で書きます（大文字小文字は区別しません）。パスワード管理アプリなどに。</p>
+    <textarea id="excl" rows="4" spellcheck="false" style="width:100%;font:13px Consolas,monospace;box-sizing:border-box;background:transparent;color:inherit;border:1px solid var(--line);border-radius:6px;padding:6px"></textarea>
+    <div class="row" style="flex-wrap:wrap;gap:6px"><span>最近コピーしたアプリ:</span><span id="recent" style="display:contents"></span></div>
+    <div class="msg" id="exmsg"></div>
+  </div>
+  <div class="card">
     <h3>履歴の削除</h3>
     <p>現在 <b id="count">0</b> 件。ピン留め以外をすべて削除します（元に戻せません）。</p>
     <button class="btn danger" id="clear">履歴をすべて削除</button> <span class="msg" id="clrmsg"></span>
@@ -342,6 +349,27 @@ $('clear').addEventListener('click', async () => {
   const n = await invoke('clear_history'); say($('clrmsg'), `${n} 件削除しました`); refreshCount();
 });
 $('opendir').addEventListener('click', () => invoke('open_dir'));
+
+/* ---------- excluded apps ---------- */
+$('exhelp').textContent = IS_MAC ? 'アプリ名か Bundle ID（例: 1password / com.agilebits.onepassword7）' : '実行ファイル名（例: KeePass.exe）';
+const exLines = () => $('excl').value.split('\n').map((s) => s.trim()).filter(Boolean);
+async function drawRecent() {
+  const cur = new Set(exLines().map((s) => s.toLowerCase()));
+  const rec = (await invoke('recent_apps')).filter((a) => !cur.has(a));
+  $('recent').innerHTML = rec.length
+    ? rec.map((a) => `<button class="btn" data-a="${a.replace(/"/g, '&quot;')}">+ ${a.replace(/</g, '&lt;')}</button>`).join('')
+    : '<span style="opacity:.6">（まだありません。何かコピーすると出ます）</span>';
+}
+function saveExcl() {
+  invoke('set_excludes', { list: exLines() }).then(() => { say($('exmsg'), '保存しました'); drawRecent(); });
+}
+$('excl').addEventListener('change', saveExcl);
+$('recent').addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b) return;
+  $('excl').value = (exLines().concat(b.dataset.a)).join('\n'); saveExcl();
+});
+invoke('get_excludes').then((l) => { $('excl').value = l.join('\n'); drawRecent(); });
+window.addEventListener('focus', drawRecent);
 
 /* ---------- update ---------- */
 function showUpdate(u) {
