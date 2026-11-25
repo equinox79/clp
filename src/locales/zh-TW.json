@@ -77,6 +77,8 @@
   "look.shadow_p": "為視窗加上陰影，更容易與後方視窗區分。",
   "look.glass_h": "毛玻璃",
   "look.glass_p": "讓視窗背景半透明，並模糊其後方的內容。",
+  "look.transp_h": "透明度",
+  "look.transp_p": "開啟毛玻璃時，決定後方內容的透出程度。過高會使文字難以閱讀。",
 
   "theme.auto": "自動（依系統設定）",
   "theme.light": "淺色",

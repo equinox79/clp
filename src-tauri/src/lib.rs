@@ -32,6 +32,7 @@ struct AppState {
     font_size: AtomicUsize,
     shadow: AtomicBool,
     glass: AtomicBool,
+    glass_transparency: AtomicUsize,
     keys: Mutex<Keys>,
     /// 履歴に残さないアプリ（小文字の実行ファイル名 / macOS はアプリ名・Bundle ID）
     exclude: Mutex<Vec<String>>,
@@ -110,6 +111,8 @@ struct Config {
     shadow: bool,
     /// 窓の背景をすりガラス風にする（macOS: vibrancy / Windows: Acrylic）
     glass: bool,
+    /// すりガラスの透明度（%）。大きいほど背後が透ける
+    glass_transparency: usize,
     /// 履歴に残さないアプリ
     exclude_apps: Vec<String>,
     /// 表示言語。"auto"（OS に合わせる）または言語コード（例: "ja"）
@@ -130,6 +133,7 @@ impl Default for Config {
             font_size: 14,
             shadow: default_shadow(),
             glass: false,
+            glass_transparency: default_glass_transparency(),
             exclude_apps: Vec::new(),
             language: "auto".into(),
             keys: Keys::default(),
@@ -361,6 +365,7 @@ struct Settings {
     font_size: usize,
     shadow: bool,
     glass: bool,
+    glass_transparency: usize,
     update_available: Option<String>,
 }
 
@@ -387,6 +392,7 @@ fn save_config(st: &AppState) {
             font_size: st.font_size.load(Ordering::SeqCst),
             shadow: st.shadow.load(Ordering::SeqCst),
             glass: st.glass.load(Ordering::SeqCst),
+            glass_transparency: st.glass_transparency.load(Ordering::SeqCst),
             exclude_apps: st.exclude.lock().unwrap().clone(),
             language: st.lang.lock().unwrap().clone(),
             keys: st.keys.lock().unwrap().clone(),
@@ -519,18 +525,21 @@ fn set_ui(app: AppHandle, close_on_blur: bool, font_size: usize) {
 struct Effects {
     shadow: bool,
     glass: bool,
+    glass_transparency: usize,
 }
 
 #[tauri::command]
-fn set_effects(app: AppHandle, shadow: bool, glass: bool) {
+fn set_effects(app: AppHandle, shadow: bool, glass: bool, glass_transparency: usize) {
     let st = app.state::<AppState>();
+    let tr = glass_transparency.min(MAX_GLASS_TRANSPARENCY);
     st.shadow.store(shadow, Ordering::SeqCst);
     st.glass.store(glass, Ordering::SeqCst);
+    st.glass_transparency.store(tr, Ordering::SeqCst);
     save_config(&st);
     if let Some(w) = app.get_webview_window("main") {
         apply_effects(&w, shadow, glass);
     }
-    let _ = app.emit("effects", Effects { shadow, glass });
+    let _ = app.emit("effects", Effects { shadow, glass, glass_transparency: tr });
 }
 
 #[tauri::command]
@@ -658,6 +667,7 @@ fn get_settings(app: AppHandle) -> Settings {
         font_size: app.state::<AppState>().font_size.load(Ordering::SeqCst),
         shadow: app.state::<AppState>().shadow.load(Ordering::SeqCst),
         glass: app.state::<AppState>().glass.load(Ordering::SeqCst),
+        glass_transparency: app.state::<AppState>().glass_transparency.load(Ordering::SeqCst),
         update_available: app.state::<AppState>().update_available.lock().unwrap().clone(),
     }
 }
@@ -698,6 +708,8 @@ struct BundleCfg {
     shadow: bool,
     #[serde(default)]
     glass: bool,
+    #[serde(default = "default_glass_transparency")]
+    glass_transparency: usize,
     #[serde(default)]
     exclude_apps: Vec<String>,
 }
@@ -708,6 +720,11 @@ fn default_true() -> bool {
 fn default_font() -> usize {
     14
 }
+/// すりガラスの透明度の既定値と上限（%）。上げすぎると文字が読みにくくなる
+fn default_glass_transparency() -> usize {
+    25
+}
+const MAX_GLASS_TRANSPARENCY: usize = 80;
 /// 影は macOS では既定でオン。Windows は枠なし窓に影を付けると DWM の 1px 枠が付くため既定はオフ
 fn default_shadow() -> bool {
     cfg!(target_os = "macos")
@@ -745,6 +762,7 @@ async fn export_settings(app: AppHandle) -> Result<String, String> {
             font_size: st.font_size.load(Ordering::SeqCst),
             shadow: st.shadow.load(Ordering::SeqCst),
             glass: st.glass.load(Ordering::SeqCst),
+            glass_transparency: st.glass_transparency.load(Ordering::SeqCst),
             exclude_apps: st.exclude.lock().unwrap().clone(),
         },
         snippets,
@@ -795,7 +813,7 @@ async fn import_settings(app: AppHandle) -> Result<String, String> {
     }
     set_limits(app.clone(), c.max_items, c.max_kb);
     set_ui(app.clone(), c.close_on_blur, c.font_size);
-    set_effects(app.clone(), c.shadow, c.glass);
+    set_effects(app.clone(), c.shadow, c.glass, c.glass_transparency);
     set_excludes(app.clone(), c.exclude_apps);
     if let Err(e) = set_keys(app.clone(), c.keys) {
         return Err(tr(&app, "err.import_keys", &[("e", &e)]));
@@ -934,6 +952,7 @@ pub fn run() {
                 font_size: AtomicUsize::new(cfg.font_size),
                 shadow: AtomicBool::new(cfg.shadow),
                 glass: AtomicBool::new(cfg.glass),
+                glass_transparency: AtomicUsize::new(cfg.glass_transparency.min(MAX_GLASS_TRANSPARENCY)),
                 keys: Mutex::new(cfg.keys.clone()),
                 exclude: Mutex::new(norm_apps(cfg.exclude_apps.clone())),
                 lang: Mutex::new(cfg.language.clone()),

@@ -77,6 +77,8 @@
   "look.shadow_p": "Añade una sombra para distinguir la ventana de lo que hay detrás.",
   "look.glass_h": "Cristal esmerilado",
   "look.glass_p": "Hace translúcido el fondo y desenfoca lo que hay detrás.",
+  "look.transp_h": "Transparencia",
+  "look.transp_p": "Cuánto se ve lo que hay detrás cuando el cristal esmerilado está activado. Si es muy alta, el texto cuesta de leer.",
 
   "theme.auto": "Automático (según el sistema)",
   "theme.light": "Claro",

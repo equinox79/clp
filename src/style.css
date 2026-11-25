@@ -32,7 +32,8 @@ mark { background: var(--mark); color: inherit; border-radius: 2px; }
 .empty { padding: 24px; text-align: center; color: var(--sub); }
 
 /* すりガラス: 窓の背後は OS がぼかす（macOS: vibrancy / Windows: Acrylic）。背景色を半透明にして透かす */
-html.glass #app { background: var(--bg); background: color-mix(in srgb, var(--bg) 86%, transparent);
+/* --glass-op は設定の「透明度」から決まる背景の不透明度（main.js が設定） */
+html.glass #app { background: var(--bg); background: color-mix(in srgb, var(--bg) var(--glass-op, 75%), transparent);
   border-color: color-mix(in srgb, var(--line) 70%, transparent); }
 html.glass #head, html.glass #preview, html.glass #hint { border-color: color-mix(in srgb, var(--line) 70%, transparent); }
 html.glass .row.sel { background: color-mix(in srgb, var(--sel) 92%, transparent); }

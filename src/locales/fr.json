@@ -77,6 +77,8 @@
   "look.shadow_p": "Ajoute une ombre pour distinguer la fenêtre de ce qui se trouve derrière.",
   "look.glass_h": "Verre dépoli",
   "look.glass_p": "Rend l'arrière-plan translucide et floute ce qui se trouve derrière.",
+  "look.transp_h": "Transparence",
+  "look.transp_p": "Dans quelle mesure l'arrière-plan transparaît quand le verre dépoli est activé. Trop élevée, le texte devient difficile à lire.",
 
   "theme.auto": "Automatique (selon le système)",
   "theme.light": "Clair",

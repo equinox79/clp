@@ -139,6 +139,8 @@ table { border-collapse:collapse; width:100%; } td { padding:5px 0; border-botto
       <label class="sw"><input type="checkbox" id="fxshadow"><span></span></label></div>
     <div class="row" style="margin-top:12px"><div class="grow"><h3 data-i18n="look.glass_h"></h3><p style="margin:0" data-i18n="look.glass_p"></p></div>
       <label class="sw"><input type="checkbox" id="fxglass"><span></span></label></div>
+    <div class="row" id="fxtrrow" style="margin-top:12px"><div class="grow"><h3 data-i18n="look.transp_h"></h3><p style="margin:0" data-i18n="look.transp_p"></p></div>
+      <input type="range" id="fxtr" min="0" max="80" step="5" style="width:160px"><span id="fxtrv" style="width:3.5em;text-align:right"></span></div>
   </div>
 </section>
 
@@ -267,7 +269,9 @@ const UI = { closeOnBlur: true, fontSize: 14 };
 const saveUI = () => invoke('set_ui', { closeOnBlur: UI.closeOnBlur, fontSize: UI.fontSize });
 $('blur').addEventListener('change', () => { UI.closeOnBlur = $('blur').checked; saveUI(); });
 $('fontsize').addEventListener('change', () => { UI.fontSize = Number($('fontsize').value); saveUI(); });
-const saveFx = () => invoke('set_effects', { shadow: $('fxshadow').checked, glass: $('fxglass').checked });
+const drawFx = () => { $('fxtrv').textContent = $('fxtr').value + '%'; $('fxtrrow').style.opacity = $('fxglass').checked ? '' : '.45'; $('fxtr').disabled = !$('fxglass').checked; };
+const saveFx = () => { drawFx(); invoke('set_effects', { shadow: $('fxshadow').checked, glass: $('fxglass').checked, glassTransparency: Number($('fxtr').value) }); };
+$('fxtr').addEventListener('input', saveFx);
 $('fxshadow').addEventListener('change', saveFx);
 $('fxglass').addEventListener('change', saveFx);
 
@@ -519,7 +523,7 @@ I18N_READY.then(() => invoke('get_settings')).then((s) => {
   $('hkreset').textContent = `${t('gen.reset')} (${fmtHotkey('Ctrl+Alt+V')})`;
   UI.closeOnBlur = s.close_on_blur; UI.fontSize = s.font_size;
   $('blur').checked = UI.closeOnBlur; $('fontsize').value = String(UI.fontSize);
-  $('fxshadow').checked = s.shadow; $('fxglass').checked = s.glass;
+  $('fxshadow').checked = s.shadow; $('fxglass').checked = s.glass; $('fxtr').value = s.glass_transparency; drawFx();
   invoke('get_keys').then((k) => { K = { ...DEFAULT_KEYS, ...k }; drawKeys(); });
   curTheme = s.theme; applyTheme(curTheme); drawThemes();
   const r = document.querySelector(`input[name=pos][value=${s.position}]`); if (r) { r.checked = true; r.closest('label').classList.add('on'); }

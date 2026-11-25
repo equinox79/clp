@@ -77,6 +77,8 @@
   "look.shadow_p": "Adds a shadow so the window stands out from what's behind it.",
   "look.glass_h": "Frosted glass",
   "look.glass_p": "Makes the background translucent and blurs what's behind it.",
+  "look.transp_h": "Transparency",
+  "look.transp_p": "How much of what's behind shows through when Frosted glass is on. Too high makes text hard to read.",
 
   "theme.auto": "Automatic (follow the OS)",
   "theme.light": "Light",

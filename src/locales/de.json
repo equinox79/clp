@@ -77,6 +77,8 @@
   "look.shadow_p": "Fügt einen Schatten hinzu, damit sich das Fenster vom Hintergrund abhebt.",
   "look.glass_h": "Milchglas",
   "look.glass_p": "Macht den Hintergrund durchscheinend und weichzeichnet, was dahinter liegt.",
+  "look.transp_h": "Transparenz",
+  "look.transp_p": "Wie stark der Hintergrund bei aktivem Milchglas durchscheint. Zu hohe Werte erschweren das Lesen.",
 
   "theme.auto": "Automatisch (wie das System)",
   "theme.light": "Hell",

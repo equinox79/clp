@@ -180,6 +180,8 @@ const setEffects = (fx) => {
   c.toggle('win', !IS_MAC);
   c.toggle('shadow', !!fx.shadow);
   c.toggle('glass', !!fx.glass);
+  const tr = Number.isFinite(fx.glass_transparency) ? fx.glass_transparency : 25;
+  document.documentElement.style.setProperty('--glass-op', (100 - tr) + '%');
 };
 listen('effects', (e) => setEffects(e.payload));
 
